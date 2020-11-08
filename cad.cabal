@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bad1f360cde67c8f4278e76eadda2f09b457ba8901f7c7be6de34187f91a32b8
+-- hash: 3b31a72035e989d508bc1cc6ea03941ad02d871fe18fb46f09ba772c8d41a503
 
 name:           cad
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      ClockEnclosure
       Lib
   other-modules:
       Paths_cad

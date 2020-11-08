@@ -1,6 +1,7 @@
 module Main where
 
 import Graphics.Implicit
+import Graphics.Implicit.Definitions
 import Lib
 
 ------------------------------------------------------------------------------
@@ -11,83 +12,100 @@ import Lib
 -- | z is UP
 
 
-main :: IO ()
-main = do
-  writeSTL 0.1 "/tmp/res.stl" $ do
-  -- writePNG3 1 "/tmp/res.png" $ do
-    union
-      [ plate
-      , difference [walls, viewhole, cordhole]
-      , wedge width depth vh_offset
-      ]
-    -- rotate3 (degX 45 <> degY 45) $ intersect
-    --   [ rotate3 (degX 30) b
-    --   , shell 1 b
-    --   ]
+boardWidth :: R
+boardWidth = railWidth * 2 + wheelXClearance * 2 + wheelWidth
+
+railWidth :: R
+railWidth = 1.25
+
+wheelWidth :: R
+wheelWidth = 6
+
+wheelRadius :: R
+wheelRadius = 5.5
+
+axelRadius :: R
+axelRadius = 1
+
+boardLength :: R
+boardLength = 5
+
+wheelZClearance :: R
+wheelZClearance = 0.5
+
+wheelXClearance :: R
+wheelXClearance = 0.5
+
+noseLength :: R
+noseLength = wheelRadius * 2
+
+tailLength :: R
+tailLength = wheelRadius * 2
+
+boardDepth :: R
+boardDepth = 1.25
 
 
-width :: R
-width = 10
-
-height :: R
-height = 10
-
-depth :: R
-depth = 10
-
-thickness :: R
-thickness = 1
-
-
-plate :: SymbolicObj3
-plate =
-  rect3R 0
-    (mk3 (-thickness) (-thickness) (-thickness))
-    (mk3 (width + thickness) (depth + thickness) 0)
-
-walls :: SymbolicObj3
-walls = union
-  [ rect3R 0
-      (mk3 (-thickness) (-thickness) 0)
-      (mk3 (width + thickness)        0            height)
-  , rect3R 0
-      (mk3 (-thickness) (-thickness) 0)
-      (mk3 0            (depth + thickness)        height)
-  , rect3R 0
-      (mk3 width        (-thickness) 0)
-      (mk3 (width + thickness) (depth + thickness) height)
-  , rect3R 0
-      (mk3 (-thickness) depth 0)
-      (mk3 (width + thickness)        (depth + thickness) height)
+noseSym :: SymbolicObj3
+noseSym = union
+  [ centeredBox (mk3 0 (wheelRadius + wheelZClearance + half noseLength) 0)
+      $ mk3 boardWidth noseLength boardDepth
   ]
 
-vh_offset :: R
-vh_offset = 2
-
-vh_height :: R
-vh_height = 2
-
-vh_inlay :: R
-vh_inlay = 1
+tailSym :: SymbolicObj3
+tailSym = union
+  [ centeredBox (mk3 0 (negate $ wheelRadius + wheelZClearance + half tailLength) 0)
+      $ mk3 boardWidth tailLength boardDepth
+  ]
 
 
-viewhole :: SymbolicObj3
-viewhole =
-  rect3R 0
-    (mk3 vh_inlay 0 vh_offset)
-    (mk3 (width - vh_inlay) (depth + thickness) (vh_offset + vh_height))
+main :: IO ()
+main = do
+  writeSTL 0.5 "/tmp/res.stl" $ do
+    union
+      [ railLeft
+      , railRight
+      , wheel
+      , axel
+      , noseSym
+      , tailSym
+      ]
+
+half :: R -> R
+half = (/ 2)
+
+railLeft :: SymbolicObj3
+railLeft = translate (allthree negate railPos) railSym
+
+railRight :: SymbolicObj3
+railRight = translate railPos railSym
+
+railPos :: R3
+railPos = mk3 (half wheelWidth + half railWidth + wheelXClearance) 0 0
 
 
-cordhole :: SymbolicObj3
-cordhole = translate (mk3 cord_inlay thickness cord_height) $ rotate3 (degX 90) $ cylinder cord_rad depth
+railSym :: SymbolicObj3
+railSym = centeredBox (mk3 0 0 0)
+        $ mk3 railWidth (wheelRadius * 2 + wheelZClearance * 2) boardDepth
 
-cord_rad :: R
-cord_rad = 1
 
-cord_height :: R
-cord_height = 4
+wheel :: SymbolicObj3
+wheel = translate (mk3 (negate $ wheelWidth / 2) 0 0)
+      $ rotate3 (degY 90)
+      $ extrudeR 2 (circle wheelRadius) wheelWidth
 
-cord_inlay :: R
-cord_inlay = 2
 
+axel :: SymbolicObj3
+axel = translate (mk3 (negate $ wheelWidth / 2 + wheelXClearance) 0 0)
+     $ rotate3 (degY 90)
+     $ extrude (wheelWidth + 2 * wheelXClearance)
+     $ circle axelRadius
+
+-- noseSym :: SymbolicObj3
+-- noseSym = box
+
+centeredBox :: R3 -> R3 -> SymbolicObj3
+centeredBox (x, y, z) (w, d, h) =
+  rect3R 0 (mk3 (x - half w) (y - half d) (z - half h))
+           (mk3 (x + half w) (y + half d) (z + half h))
 
