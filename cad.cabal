@@ -1,0 +1,65 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: bad1f360cde67c8f4278e76eadda2f09b457ba8901f7c7be6de34187f91a32b8
+
+name:           cad
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/isovector/cad#readme>
+homepage:       https://github.com/isovector/cad#readme
+bug-reports:    https://github.com/isovector/cad/issues
+author:         Sandy Maguire
+maintainer:     sandy@sandymaguire.me
+copyright:      Sandy Maguire
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/isovector/cad
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_cad
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , implicit
+  default-language: Haskell2010
+
+executable cad-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_cad
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , cad
+    , implicit
+  default-language: Haskell2010
+
+test-suite cad-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_cad
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , cad
+    , implicit
+  default-language: Haskell2010

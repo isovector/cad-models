@@ -1,0 +1,9 @@
+resolver: lts-16.0
+
+packages:
+- .
+
+extra-deps:
+  - implicit-0.3.0.1
+  - storable-endian-0.2.6
+
