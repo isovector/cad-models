@@ -13,30 +13,37 @@ import Lib
 
 main :: IO ()
 main = do
-  writeSTL 0.1 "/tmp/res.stl" $ do
+  writeSTL 1 "/tmp/res.stl" $ do
   -- writePNG3 1 "/tmp/res.png" $ do
-    union
-      [ plate
-      , difference [walls, viewhole, cordhole]
-      , wedge width depth vh_offset
-      ]
-    -- rotate3 (degX 45 <> degY 45) $ intersect
-    --   [ rotate3 (degX 30) b
-    --   , shell 1 b
-    --   ]
+    top
+
+base :: SymbolicObj3
+base =
+  union
+    [ plate
+    , difference [walls, viewhole, cordhole]
+    , wedge depth width vh_offset
+    ]
+
+top :: SymbolicObj3
+top =
+  union
+    [ plate
+    , nubs
+    ]
 
 
 width :: R
-width = 10
+width = 103.58 + tolerance
 
 height :: R
-height = 10
+height = 32.70 + height_padding + tolerance + height_padding / 2
 
 depth :: R
-depth = 10
+depth = 48.31
 
 thickness :: R
-thickness = 1
+thickness = 2.5
 
 
 plate :: SymbolicObj3
@@ -61,14 +68,42 @@ walls = union
       (mk3 (width + thickness)        (depth + thickness) height)
   ]
 
+nub_size :: R
+nub_size = 7
+
+nub_height :: R
+nub_height = 10
+
+nubs :: SymbolicObj3
+nubs = union
+  [ rect3R 0
+      (mk3 0 0 0)
+      (mk3 nub_size        nub_size            nub_height)
+  , rect3R 0
+      (mk3 0 (depth - nub_size) 0)
+      (mk3 nub_size (depth)        nub_height)
+  , rect3R 0
+      (mk3 (width - nub_size) 0 0)
+      (mk3 width nub_size nub_height)
+  , rect3R 0
+      (mk3 (width - nub_size) (depth - nub_size) 0)
+      (mk3 (width)        (depth) nub_height)
+  ]
+
+tolerance :: R
+tolerance = 5
+
 vh_offset :: R
-vh_offset = 2
+vh_offset = 1.9 + height_padding
 
 vh_height :: R
-vh_height = 2
+vh_height = 30.36 + tolerance
 
 vh_inlay :: R
-vh_inlay = 1
+vh_inlay = 5.4
+
+height_padding :: R
+height_padding = 14.45
 
 
 viewhole :: SymbolicObj3
@@ -82,12 +117,12 @@ cordhole :: SymbolicObj3
 cordhole = translate (mk3 cord_inlay thickness cord_height) $ rotate3 (degX 90) $ cylinder cord_rad depth
 
 cord_rad :: R
-cord_rad = 1
+cord_rad = 6
 
 cord_height :: R
-cord_height = 4
+cord_height = 23.67
 
 cord_inlay :: R
-cord_inlay = 2
+cord_inlay = 7.6
 
 
