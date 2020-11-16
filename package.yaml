@@ -22,6 +22,10 @@ description:         Please see the README on GitHub at <https://github.com/isov
 dependencies:
 - base >= 4.7 && < 5
 - implicit
+- linear
+- lens
+- SVGFonts
+- diagrams-lib
 
 library:
   source-dirs: src

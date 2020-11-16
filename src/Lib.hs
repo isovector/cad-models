@@ -1,12 +1,34 @@
-module Lib where
+module Lib
+  ( module Lib
+  , module Graphics.Implicit
+  , L.V2 (..)
+  , L.V3 (..)
+  , L.M22
+  , L.M33
+  , L.M44
+  , (L.!*)
+  , (L.*!)
+  , (L.^*)
+  , (L.*^)
+  , (L.!*!)
+  , (L.!+!)
+  , (L.!-!)
+  , L._x
+  , L._y
+  , L._z
+  , module Control.Lens
+  ) where
 
-import Graphics.Implicit
-import Graphics.Implicit.Primitives (Object(getBox))
+import           Control.Lens
+import           Graphics.Implicit
+import           Graphics.Implicit.Primitives (Object(getBox))
+import qualified Linear as L
 
 
 type R = Double
 type R2 = (R, R)
 type R3 = (R, R, R)
+
 
 instance Semigroup Double where
   (<>) = (+)
@@ -34,6 +56,28 @@ box
     -> SymbolicObj3
 box w h d = rect3R 0 (0, 0, 0) (w, h, d)
 
+centeredBox
+    :: R  -- ^ width
+    -> R  -- ^ depth
+    -> R  -- ^ height
+    -> SymbolicObj3
+centeredBox = centeredBoxR 0
+
+centeredBoxR
+    :: R
+    -> R  -- ^ width
+    -> R  -- ^ depth
+    -> R  -- ^ height
+    -> SymbolicObj3
+centeredBoxR r w d h =
+  rect3R r
+    (-half_w, -half_d, -half_h)
+    (half_w, half_d, half_h)
+  where
+    half_w = w / 2
+    half_d = d / 2
+    half_h = h / 2
+
 deg :: R -> R
 deg degs = degs * pi / 180
 
@@ -55,9 +99,20 @@ extrudedSlot
 extrudedSlot th h obj =
   let obj' = shell th obj
       ((x, y, z), (x', y', _)) = getBox obj'
-      obj'' = translate (0, 0, negate $ z + th) obj'
+      obj'' = translate (0, 0, negate z - th - 1) obj'
    in intersect
         [ obj''
         , rect3R 0 (x, y, 0) (x', y', h)
         ]
+
+
+unpackV2 :: L.V2 a -> (a, a)
+unpackV2 (L.V2 x y) = (x, y)
+
+unpackV3 :: L.V3 a -> (a, a, a)
+unpackV3 (L.V3 x y z) = (x, y, z)
+
+expandR2 :: R -> R2 -> R3
+expandR2 z (x, y) = (x, y, z)
+
 
