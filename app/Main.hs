@@ -2,7 +2,7 @@ module Main where
 
 import Graphics.Implicit
 import Graphics.Implicit.Definitions
-import Lib
+import Lib hiding (centeredBox)
 
 ------------------------------------------------------------------------------
 -- |  ASSUME THE CAMERA IS FROM THE FRONT

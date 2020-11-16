@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3b31a72035e989d508bc1cc6ea03941ad02d871fe18fb46f09ba772c8d41a503
+-- hash: a811b30817731808f6fb15ed2d83d7bc72fb01cb8657a028b725e47ede540210
 
 name:           cad
 version:        0.1.0.0
@@ -27,15 +27,23 @@ source-repository head
 
 library
   exposed-modules:
+      BinPartOrg
       ClockEnclosure
       Lib
+      Roomba
+      StdParts
+      Text
   other-modules:
       Paths_cad
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      SVGFonts
+    , base >=4.7 && <5
+    , diagrams-lib
     , implicit
+    , lens
+    , linear
   default-language: Haskell2010
 
 executable cad-exe
@@ -46,9 +54,13 @@ executable cad-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      SVGFonts
+    , base >=4.7 && <5
     , cad
+    , diagrams-lib
     , implicit
+    , lens
+    , linear
   default-language: Haskell2010
 
 test-suite cad-test
@@ -60,7 +72,11 @@ test-suite cad-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      SVGFonts
+    , base >=4.7 && <5
     , cad
+    , diagrams-lib
     , implicit
+    , lens
+    , linear
   default-language: Haskell2010

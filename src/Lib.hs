@@ -19,7 +19,7 @@ module Lib
   , module Control.Lens
   ) where
 
-import           Control.Lens
+import           Control.Lens hiding (plate)
 import           Graphics.Implicit
 import           Graphics.Implicit.Primitives (Object(getBox))
 import qualified Linear as L
