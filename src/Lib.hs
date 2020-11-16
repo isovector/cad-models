@@ -1,6 +1,7 @@
 module Lib where
 
 import Graphics.Implicit
+import Graphics.Implicit.Primitives (Object(getBox))
 
 
 type R = Double
@@ -44,4 +45,19 @@ degY d = mk3 0 (deg d) 0
 
 degZ :: R -> R3
 degZ d = mk3 0 0 (deg d)
+
+
+extrudedSlot
+    :: R  -- ^ slot thickness
+    -> R  -- ^ slot height
+    -> SymbolicObj3
+    -> SymbolicObj3
+extrudedSlot th h obj =
+  let obj' = shell th obj
+      ((x, y, z), (x', y', _)) = getBox obj'
+      obj'' = translate (0, 0, negate $ z + th) obj'
+   in intersect
+        [ obj''
+        , rect3R 0 (x, y, 0) (x', y', h)
+        ]
 
