@@ -2,15 +2,17 @@ module Roomba where
 
 import Lib
 import StdParts
-import Graphics.SVGFonts (textSVG)
+import Graphics.Implicit.Primitives (Object(getBox))
+import Data.Maybe (fromJust)
 
 
 main :: IO ()
 main = do
   writeSTL 1 "/tmp/roomba.stl" $ do
-    union
-      [ basePlate
-      ]
+    fromJust $ pack3 (500, 500) 10 $ split basePlate
+    -- union
+    --   [ head $ split basePlate
+    --   ]
 
 
 
@@ -29,27 +31,50 @@ baseThickness = 2.5
 wheelRadPos :: R
 wheelRadPos = vacuumBagRadius + additionalRadius + yellowWheelRadius / 2
 
+wheelDegPos :: R
+wheelDegPos = 140
+
 halfPos :: R
 halfPos = vacuumBagRadius + additionalRadius /2
 
 
+agitatorDegPos :: R
+agitatorDegPos = 55
+
 ------------------------------------------------------------------------------
 
 basePlate :: SymbolicObj3
-basePlate = union
-  [ translate (0, 0, -baseThickness) $ difference
-    [ cylinder (vacuumBagRadius + additionalRadius) baseThickness
-    , cylinder  vacuumBagRadius baseThickness
-    , symmetrically halfPos 60 agitatorHoleBB
-    , symmetrically wheelRadPos 140 yellowWheelBB
+basePlate = intersect
+  [ union
+    [ translate (0, 0, -baseThickness) $
+        difference
+          [ cylinder (vacuumBagRadius + additionalRadius) baseThickness
+          , cylinder  vacuumBagRadius baseThickness
+          , symmetrically halfPos agitatorDegPos agitatorHoleBB
+          , symmetrically wheelRadPos wheelDegPos yellowWheelBB
+          ]
+    , translate (mk3 (-3) 58 0) $
+        withPolarPos wheelRadPos (-wheelDegPos) $
+          rotate3 (degZ (-90)) $
+            wedge 15 15 15
+      -- centeredBox (baseThickness * 2) 20 30
+      -- wheel motor
+    , symmetrically (halfPos + 45 / 2) 145 $ extrudedSlot 2 2 $ centeredBox 19 65 10
+    , symmetrically halfPos agitatorDegPos agitatorSlot
+    , withPolarPos halfPos (-80) $ rotate90Z arduinoMiniSlot
+    , withPolarPos halfPos (-105) $ rotate90Z miniBreadboardSlot
+    , withPolarPos halfPos 180 l298nSlot
+    , withPolarPos halfPos 98 $ doubleAAHolderSlot
+    , withPolarPos halfPos 0 $ rotate90Z doubleAAHolderSlot
     ]
-    -- wheel motor
-  , symmetrically (halfPos + 45 / 2) 145 $ extrudedSlot 2 2 $ centeredBox 19 65 10
-  , symmetrically halfPos 60 agitatorSlot
-  , withPolarPos halfPos 90 arduinoMiniSlot
-  , withPolarPos (halfPos + 5) 180 l298nSlot
-  , withPolarPos halfPos (-90) miniBreadboardSlot
+  , basePlateBounding
   ]
+
+rotate90Z :: SymbolicObj3 -> SymbolicObj3
+rotate90Z = rotate3 (degZ 90)
+
+basePlateBounding :: SymbolicObj3
+basePlateBounding = translate (0, 0, -baseThickness) $ cylinder (vacuumBagRadius + additionalRadius) 100
 
 withPolarPos
     :: R             -- ^ r
@@ -84,5 +109,18 @@ agitatorHoleBB = centeredBox 15 15 25
 agitatorSlot :: SymbolicObj3
 agitatorSlot = extrudedSlot 2 2 $ centeredBox 21 21 25
 
+
+split :: SymbolicObj3 -> [SymbolicObj3]
+split obj =
+  let ((x1, y1, z1), (x2, y2, z2)) = getBox obj
+      w = x2 - x1
+      d = y2 - y1
+      h = z2 - z1
+      b = centeredBox w d h
+   in [ intersect [ obj, translate (mk3 x1 y1 z1) b ]
+      , intersect [ obj, translate (mk3 x2 y1 z1) b ]
+      , intersect [ obj, translate (mk3 x2 y2 z1) b ]
+      , intersect [ obj, translate (mk3 x1 y2 z1) b ]
+      ]
 
 
