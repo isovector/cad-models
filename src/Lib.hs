@@ -41,7 +41,11 @@ wedge
     -> R  -- ^ depth
     -> R  -- ^ height
     -> SymbolicObj3
-wedge w d h = rotate3 (degZ 90) $ rotate3 (degX 90) $ extrude d $ polygonR 0 [mk2 0 0, mk2 w 0, mk2 w h]
+wedge w d h
+  = rotate3 (degZ 90)
+  $ rotate3 (degX 90)
+  $ extrude d
+  $ polygonR 0 [mk2 0 0, mk2 w 0, mk2 w h]
 
 mk2 :: R -> R -> R2
 mk2 = (,)
@@ -111,6 +115,13 @@ unpackV2 (L.V2 x y) = (x, y)
 
 unpackV3 :: L.V3 a -> (a, a, a)
 unpackV3 (L.V3 x y z) = (x, y, z)
+
+packV2 :: (a, a) -> L.V2 a
+packV2 (x, y) = (L.V2 x y)
+
+packV3 :: (a, a, a) -> L.V3 a
+packV3 (x, y, z) = (L.V3 x y z)
+
 
 expandR2 :: R -> R2 -> R3
 expandR2 z (x, y) = (x, y, z)

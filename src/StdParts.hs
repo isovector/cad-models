@@ -33,7 +33,7 @@ arduinoMiniSlot :: SymbolicObj3
 arduinoMiniSlot = extrudedSlot 2 2 $ centeredBox 18 45 10
 
 l298nSlot :: SymbolicObj3
-l298nSlot = extrudedSlot 2 2 $ centeredBox 88 44 10
+l298nSlot = extrudedSlot 2 2 $ centeredBox 44 44 10
 
 miniBreadboardSlot :: SymbolicObj3
 miniBreadboardSlot = extrudedSlot 2 2 $ centeredBox 35 47 10
