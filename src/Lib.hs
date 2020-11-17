@@ -23,6 +23,8 @@ import           Control.Lens hiding (plate)
 import           Graphics.Implicit
 import           Graphics.Implicit.Primitives (Object(getBox))
 import qualified Linear as L
+import Linear.Matrix
+import Linear.V2 hiding (R2)
 
 
 type R = Double
@@ -125,5 +127,65 @@ packV3 (x, y, z) = (L.V3 x y z)
 
 expandR2 :: R -> R2 -> R3
 expandR2 z (x, y) = (x, y, z)
+
+
+withPolarPos
+    :: R             -- ^ r
+    -> R             -- ^ theta in degrees
+    -> SymbolicObj3  -- ^ obj to position
+    -> SymbolicObj3
+withPolarPos r theta = translate (polarPos r $ deg theta)
+
+
+symmetrically :: R -> R -> SymbolicObj3 -> SymbolicObj3
+symmetrically r theta obj = union
+  [ withPolarPos r theta obj
+  , withPolarPos r (-theta) obj
+  ]
+
+
+
+polarPos
+    :: R  -- ^ r
+    -> R  -- ^ theta
+    -> R3
+polarPos r theta =
+  expandR2 0 $ unpackV2 $ rotMat theta !* V2 0 r
+
+
+rotMat :: R -> L.M22 Double
+rotMat theta =
+  V2 (V2 ct (-st))
+     (V2 st ct)
+  where
+    ct = cos theta
+    st = sin theta
+
+
+getOrigin :: SymbolicObj3 -> R3
+getOrigin = fst . getBox
+
+
+
+------------------------------------------------------------------------------
+-- | Put it at z=0
+slam :: SymbolicObj3 -> SymbolicObj3
+slam obj =
+  let (_, _, z) = getOrigin obj
+   in translate (mk3 0 0 (-z)) obj
+
+
+split :: SymbolicObj3 -> [SymbolicObj3]
+split obj =
+  let ((x1, y1, z1), (x2, y2, z2)) = getBox obj
+      w = x2 - x1
+      d = y2 - y1
+      h = z2 - z1
+      b = centeredBox w d h
+   in [ intersect [ obj, translate (mk3 x1 y1 z1) b ]
+      , intersect [ obj, translate (mk3 x2 y1 z1) b ]
+      , intersect [ obj, translate (mk3 x2 y2 z1) b ]
+      , intersect [ obj, translate (mk3 x1 y2 z1) b ]
+      ]
 
 

@@ -76,51 +76,11 @@ rotate90Z = rotate3 (degZ 90)
 basePlateBounding :: SymbolicObj3
 basePlateBounding = translate (0, 0, -baseThickness) $ cylinder (vacuumBagRadius + additionalRadius) 100
 
-withPolarPos
-    :: R             -- ^ r
-    -> R             -- ^ theta in degrees
-    -> SymbolicObj3  -- ^ obj to position
-    -> SymbolicObj3
-withPolarPos r theta = translate (basePolarPos r $ deg theta)
-
-symmetrically :: R -> R -> SymbolicObj3 -> SymbolicObj3
-symmetrically r theta obj = union
-  [ withPolarPos r theta obj
-  , withPolarPos r (-theta) obj
-  ]
-
-
-
-basePolarPos :: R -> R -> R3
-basePolarPos r theta = expandR2 0 $ unpackV2 $ rotMat theta !* V2 0 r
-
-rotMat :: R -> M22 Double
-rotMat theta =
-  V2 (V2 ct (-st))
-     (V2 st ct)
-  where
-    ct = cos theta
-    st = sin theta
-
-
 agitatorHoleBB :: SymbolicObj3
 agitatorHoleBB = centeredBox 15 15 25
 
 agitatorSlot :: SymbolicObj3
 agitatorSlot = extrudedSlot 2 2 $ centeredBox 21 21 25
 
-
-split :: SymbolicObj3 -> [SymbolicObj3]
-split obj =
-  let ((x1, y1, z1), (x2, y2, z2)) = getBox obj
-      w = x2 - x1
-      d = y2 - y1
-      h = z2 - z1
-      b = centeredBox w d h
-   in [ intersect [ obj, translate (mk3 x1 y1 z1) b ]
-      , intersect [ obj, translate (mk3 x2 y1 z1) b ]
-      , intersect [ obj, translate (mk3 x2 y2 z1) b ]
-      , intersect [ obj, translate (mk3 x1 y2 z1) b ]
-      ]
 
 
