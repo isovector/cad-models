@@ -1,3 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE RankNTypes #-}
+
 module Lib
   ( module Lib
   , module Graphics.Implicit
@@ -162,17 +167,56 @@ rotMat theta =
     st = sin theta
 
 
-getOrigin :: SymbolicObj3 -> R3
+getOrigin :: Object obj vec => obj -> vec
 getOrigin = fst . getBox
 
+getExtent :: Object obj vec => obj -> vec
+getExtent = snd . getBox
+
+class StupidImplicitVector a where
+  zero :: a
+
+instance StupidImplicitVector R2 where
+  zero = mk2 0 0
+
+instance StupidImplicitVector R3 where
+  zero = mk3 0 0 0
+
+
+
+slamming
+    :: (Num a, Object obj vec, StupidImplicitVector vec)
+    => Lens' vec a
+    -> (obj -> vec)
+    -> obj
+    -> obj
+slamming l boxsel obj =
+  let dist = negate $ boxsel obj ^. l
+      dpos = zero & l .~ dist
+   in translate dpos obj
 
 
 ------------------------------------------------------------------------------
 -- | Put it at z=0
-slam :: SymbolicObj3 -> SymbolicObj3
-slam obj =
-  let (_, _, z) = getOrigin obj
-   in translate (mk3 0 0 (-z)) obj
+slamBottom :: SymbolicObj3 -> SymbolicObj3
+slamBottom = slamming _3 getOrigin
+
+slamTop :: SymbolicObj3 -> SymbolicObj3
+slamTop = slamming _3 getExtent
+
+slamLeft :: (Object obj vec, StupidImplicitVector vec, Field1 vec vec Double Double) => obj -> obj
+slamLeft = slamming _1 getOrigin
+
+slamRight :: (Object obj vec, StupidImplicitVector vec, Field1 vec vec Double Double) => obj -> obj
+slamRight = slamming _1 getExtent
+
+------------------------------------------------------------------------------
+-- | TODO(sandy): maybe this is reversed with slamBack
+slamFront :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
+slamFront = slamming _2 getOrigin
+
+slamBack :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
+slamBack = slamming _2 getExtent
 
 
 split :: SymbolicObj3 -> [SymbolicObj3]
