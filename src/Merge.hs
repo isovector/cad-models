@@ -16,3 +16,12 @@ mergeR r x (Scale3 pddd s) = scale pddd $ mergeR r (scale (allthree (1 /) pddd) 
 mergeR r x (Rotate3 pddd s) = rotate3 pddd $ mergeR r (rotate3 (negate pddd) x) s
 mergeR r x y = unionR r [x, y]
 
+infixl 6 +-
+(+-) :: SymbolicObj3 -> SymbolicObj3 -> SymbolicObj3
+(+-) = merge
+
+merging :: SymbolicObj3 -> [SymbolicObj3] -> SymbolicObj3
+merging = foldl' merge
+
+
+
