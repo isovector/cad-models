@@ -2,15 +2,30 @@ module Roomba where
 
 import Lib
 import StdParts
+import Merge (merging)
+
 
 
 main :: IO ()
 main = do
   writeSTL 0.5 "/tmp/roomba.stl" $ do
-    basePlate
-    -- union
-    --   [ head $ split basePlate
-    --   ]
+    intersect
+      [ basePlate
+      , center3 $ expand (0, 0, 100) stockPlate
+      ]
+
+shellSlot :: SymbolicObj3
+shellSlot =
+  expand (mk3 (-shellInset) (-shellInset) 0) $
+      difference
+        [ shell 2.5 $ stockPlate
+        , center3 $ expand (mk3 0 0 10) stockPlate
+        ]
+
+
+shellInset :: R
+shellInset = 10
+
 
 baseThickness :: R
 baseThickness = 2.5
@@ -26,35 +41,69 @@ plateSize = 180
 stockPlate :: SymbolicObj3
 stockPlate
   = slamTop
-  $ center3
-  $ extrude baseThickness
-  $ union
-  $ let half = plateSize / 2
-     in [ slamBack $ rectR half zero $ mk2 plateSize plateSize
-        , slamBack $ rectR 0 zero $ mk2 plateSize half
-        ]
-
-basePlate :: SymbolicObj3
-basePlate = slamBottom $
-  difference
-    [ union
-        [ stockPlate
-        , translate (mk3 (-wheelXOffset) (wheelYOffset - yellowWheelMotorAxelOffset) 0) $ slamLeft  $ slamFront yellowWheelMotorSlot
-        , translate (mk3 ( wheelXOffset) (wheelYOffset - yellowWheelMotorAxelOffset) 0) $ slamRight $ slamFront yellowWheelMotorSlot
-        , translate (mk3 0 (wheelYOffset + 13) 0) $ slamFront l298nSlot
-        , translate (mk3 0 40 0) $ slamFront ovonicLipoBatterySlot
-        , translate (mk3 (-agitatorXOffset) agitatorYOffset 0) agitatorSlot
-        , translate (mk3 ( agitatorXOffset) agitatorYOffset 0) agitatorSlot
-        , translate (mk3 0 intakeHoleYOffset 0) $ shell baseThickness intakeHoleBB
-        , translate (mk3 0 17.5 0) $ slamBack $ slamBottom containerSlot
-        ]
+  $ difference
+    [ center3
+      $ extrude baseThickness
+      $ union
+      $ let half = plateSize / 2
+        in [ slamBack $ rectR half zero $ mk2 plateSize plateSize
+           , slamBack $ rectR 5 zero $ mk2 plateSize half
+           ]
     , translate (mk3 (-wheelXOffset) wheelYOffset 0) $ slamRight yellowWheelBB
     , translate (mk3 ( wheelXOffset) wheelYOffset 0) $ slamLeft yellowWheelBB
-    , translate (mk3 (-agitatorXOffset) agitatorYOffset 0) agitatorHoleBB
-    , translate (mk3 ( agitatorXOffset) agitatorYOffset 0) agitatorHoleBB
-    , translate (mk3 0 intakeHoleYOffset (-baseThickness)) intakeHoleBB
-    , translate (mk3 0 (intakeHoleYOffset - baseThickness) 0) bagHoleBB
     ]
+
+basePlate :: SymbolicObj3
+basePlate =
+  merging
+    ( union
+        [ stockPlate
+        , translate (mk3 0 (wheelYOffset + 8) 0) $ slamFront l298nSlot
+        , translate (mk3 0 65 0) $ ovonicLipoBatterySlot
+        , translate (mk3 (-60) 70 0) $ arduinoMiniSlot
+        , slamBottom shellSlot
+        ]
+    )
+    [ translateXY (-agitatorXOffset) agitatorYOffset agitatorM
+    , translateXY   agitatorXOffset  agitatorYOffset agitatorM
+    , translateXY (-wheelXOffset) motorYOffset $ slamLeft motorM
+    , translateXY ( wheelXOffset) motorYOffset $ slamRight motorM
+    , translateXY 0 intakeHoleYOffset intakeM
+    ]
+  where
+    motorYOffset = wheelYOffset - yellowWheelMotorAxelOffset
+
+
+motorM :: SymbolicObj3
+motorM =
+  slamFront $ difference
+    [ yellowWheelMotorSlot
+    , slamBottom yellowWheelMotorBB
+    ]
+
+
+flipSwitchBB :: SymbolicObj3
+flipSwitchBB = difference
+  [ mempty
+  , rotate3 (degY 90) $ cylinder 3.3 10
+  ]
+
+
+intakeM :: SymbolicObj3
+intakeM = difference
+  [ slamBack $ union
+      [ slamFront $ shell baseThickness intakeHoleBB
+      , translateXY 0 baseThickness $ slamBack containerSlot
+      ]
+  , translate
+      (mk3 0 (negate $ baseThickness / 2) (-baseThickness)) $
+        slamBack intakeHoleBB
+  , translateXY 0 (-baseThickness) bagHoleBB
+  ]
+
+
+translateXY :: R -> R -> SymbolicObj3 -> SymbolicObj3
+translateXY x y = translate (mk3 x y 0)
 
 containerYOffset :: R
 containerYOffset = 0
@@ -72,14 +121,23 @@ agitatorYOffset :: R
 agitatorYOffset = 50
 
 
+agitatorM :: SymbolicObj3
+agitatorM = difference
+  [ agitatorSlot
+  , agitatorHoleBB
+  ]
+
+
+
+
 agitatorHoleBB :: SymbolicObj3
-agitatorHoleBB = centeredBox 15 15 25
+agitatorHoleBB = centeredBox 6.5 6.5 25
 
 agitatorSlot :: SymbolicObj3
-agitatorSlot = extrudedSlot 2 2 $ centeredBox 21 21 25
+agitatorSlot = extrudedSlot 2 2 $ centeredBox 20 15 25
 
 containerBB :: SymbolicObj3
-containerBB = centeredBox 118 33 63
+containerBB = centeredBox 118 30 63
 
 container :: SymbolicObj3
 container = shell baseThickness containerBB
@@ -87,7 +145,10 @@ container = shell baseThickness containerBB
 containerSlot :: SymbolicObj3
 containerSlot
   = extrudedSlot thickness 10
-  $ expand (mk3 baseThickness baseThickness baseThickness)
+  $ expand (mk3
+      (baseThickness * 2)
+      (baseThickness * 2)
+      (baseThickness * 2))
   $ containerBB
 
 
@@ -105,5 +166,10 @@ intakeHoleZSize :: R
 intakeHoleZSize = 20
 
 bagHoleBB :: SymbolicObj3
-bagHoleBB = slamBack $ slamBottom $ centeredBox bagHoleXSize 20 (intakeHoleZSize / 2)
+bagHoleBB
+  = translateXY 0 (-10)
+  $ slamBack
+  $ slamBottom
+  $ centeredBox bagHoleXSize 10
+  $ intakeHoleZSize / 2
 
