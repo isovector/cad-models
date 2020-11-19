@@ -122,7 +122,8 @@ extrudedSlot
     -> SymbolicObj3
     -> SymbolicObj3
 extrudedSlot th h obj =
-  let obj' = shell th obj
+  let spacing = th + 1
+      obj' = shell th $ expand (mk3 spacing spacing h) obj
       ((x, y, z), (x', y', _)) = getBox obj'
       obj'' = translate (0, 0, negate z - th - 1) obj'
    in intersect
