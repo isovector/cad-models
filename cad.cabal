@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a811b30817731808f6fb15ed2d83d7bc72fb01cb8657a028b725e47ede540210
+-- hash: ac51180a936080610aa10c8a1ea33523d3f126d1564faf0c3314a5b0e4fa7ca3
 
 name:           cad
 version:        0.1.0.0
@@ -30,6 +30,7 @@ library
       BinPartOrg
       ClockEnclosure
       Lib
+      Merge
       Roomba
       StdParts
       Text
