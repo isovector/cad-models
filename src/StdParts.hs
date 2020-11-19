@@ -23,12 +23,14 @@ yellowWheelRadius = 68 / 2
 yellowWheelMotorWidth :: R
 yellowWheelMotorWidth = 19
 
--- TODO(sandy): measure me
 yellowWheelMotorAxelOffset :: R
-yellowWheelMotorAxelOffset = 8
+yellowWheelMotorAxelOffset = 11.3
 
 yellowWheelMotorSlot :: SymbolicObj3
-yellowWheelMotorSlot = extrudedSlot 2 2 $ centeredBox 19 65 10
+yellowWheelMotorSlot = extrudedSlot 2 2 yellowWheelMotorBB
+
+yellowWheelMotorBB :: SymbolicObj3
+yellowWheelMotorBB = centeredBox 19 48.3 22.5
 
 
 tabXPosFacing :: SymbolicObj3
@@ -40,11 +42,11 @@ tabXNegFacing = rotate3 (degZ pi) $ box 2 5 7
 
 
 arduinoMiniSlot :: SymbolicObj3
-arduinoMiniSlot = extrudedSlot 2 2 $ centeredBox 18 45 10
+arduinoMiniSlot = extrudedSlot 2 2 $ centeredBox 45 18.5 10
 
 
 l298nSlot :: SymbolicObj3
-l298nSlot = extrudedSlot 2 2 $ centeredBox 44 44 10
+l298nSlot = extrudedSlot 2 2 $ centeredBox 43.5 43.5 10
 
 
 miniBreadboardSlot :: SymbolicObj3
