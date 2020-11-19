@@ -1,7 +1,9 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE RankNTypes           #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns         #-}
 
 module Lib
   ( module Lib
@@ -28,8 +30,8 @@ import           Control.Lens hiding (plate)
 import           Graphics.Implicit
 import           Graphics.Implicit.Primitives (Object(getBox))
 import qualified Linear as L
-import Linear.Matrix
-import Linear.V2 hiding (R2)
+import           Linear.Matrix
+import           Linear.V2 hiding (R2)
 
 
 type R = Double
@@ -39,6 +41,18 @@ type R3 = (R, R, R)
 
 instance Semigroup Double where
   (<>) = (+)
+
+instance Semigroup SymbolicObj3 where
+  a <> b = union [a,  b]
+
+instance Semigroup SymbolicObj2 where
+  a <> b = union [a,  b]
+
+instance Monoid SymbolicObj2 where
+  mempty = rectR 0 zero zero
+
+instance Monoid SymbolicObj3 where
+  mempty = rect3R 0 zero zero
 
 extrude :: R -> SymbolicObj2 -> SymbolicObj3
 extrude = flip $ extrudeR 0
@@ -142,8 +156,8 @@ withPolarPos
 withPolarPos r theta = translate (polarPos r $ deg theta)
 
 
-symmetrically :: R -> R -> SymbolicObj3 -> SymbolicObj3
-symmetrically r theta obj = union
+polarSymmetrically :: R -> R -> SymbolicObj3 -> SymbolicObj3
+polarSymmetrically r theta obj = union
   [ withPolarPos r theta obj
   , withPolarPos r (-theta) obj
   ]
@@ -172,6 +186,20 @@ getOrigin = fst . getBox
 
 getExtent :: Object obj vec => obj -> vec
 getExtent = snd . getBox
+
+getSize :: SymbolicObj3 -> R3
+getSize obj = getExtent obj - getOrigin obj
+
+
+expand :: R3 -> SymbolicObj3 -> SymbolicObj3
+expand (dx, dy, dz) obj =
+  let (w, d, h) = getSize obj
+      wf = (w + dx) / w
+      df = (d + dy) / d
+      hf = (h + dz) / h
+   in scale (wf,df, hf) obj
+
+
 
 class StupidImplicitVector a where
   zero :: a
@@ -210,13 +238,17 @@ slamLeft = slamming _1 getOrigin
 slamRight :: (Object obj vec, StupidImplicitVector vec, Field1 vec vec Double Double) => obj -> obj
 slamRight = slamming _1 getExtent
 
-------------------------------------------------------------------------------
--- | TODO(sandy): maybe this is reversed with slamBack
 slamFront :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
 slamFront = slamming _2 getOrigin
 
 slamBack :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
 slamBack = slamming _2 getExtent
+
+center3 :: SymbolicObj3 -> SymbolicObj3
+center3 obj =
+  let (packV3 -> orig, packV3 -> ext) = getBox obj
+      dpos = negate $ orig + (ext - orig)  L.^* 0.5
+   in translate (unpackV3 dpos) obj
 
 
 split :: SymbolicObj3 -> [SymbolicObj3]
