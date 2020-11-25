@@ -5,10 +5,13 @@ import StdParts
 import Merge (merging)
 
 
-
 main :: IO ()
 main = do
   writeSTL 0.5 "/tmp/roomba.stl" $ do
+    funnel
+
+roombaBottom :: SymbolicObj3
+roombaBottom =
     intersect
       [ basePlate
       , center3 $ expand (0, 0, 100) stockPlate
@@ -22,6 +25,17 @@ shellSlot =
         , center3 $ expand (mk3 0 0 10) stockPlate
         ]
 
+funnel :: SymbolicObj3
+funnel =
+  let pyr   = slamBottom $ center3 $ pyramid 5 120 120 30
+   in difference
+        [ pyr
+        , scale (mk3 0.95 0.95 0.95) pyr
+        , cylinder 6 40
+        ]
+
+
+------------------------------------------------------------------------------
 
 shellInset :: R
 shellInset = 10
@@ -101,9 +115,6 @@ intakeM = difference
   , translateXY 0 (-baseThickness) bagHoleBB
   ]
 
-
-translateXY :: R -> R -> SymbolicObj3 -> SymbolicObj3
-translateXY x y = translate (mk3 x y 0)
 
 containerYOffset :: R
 containerYOffset = 0
