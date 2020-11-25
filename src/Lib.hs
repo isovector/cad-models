@@ -42,18 +42,6 @@ type R3 = (R, R, R)
 instance Semigroup Double where
   (<>) = (+)
 
-instance Semigroup SymbolicObj3 where
-  a <> b = union [a,  b]
-
-instance Semigroup SymbolicObj2 where
-  a <> b = union [a,  b]
-
-instance Monoid SymbolicObj2 where
-  mempty = rectR 0 zero zero
-
-instance Monoid SymbolicObj3 where
-  mempty = rect3R 0 zero zero
-
 extrude :: R -> SymbolicObj2 -> SymbolicObj3
 extrude = flip $ extrudeR 0
 
@@ -200,6 +188,17 @@ expand (dx, dy, dz) obj =
       hf = (h + dz) / h
    in scale (wf,df, hf) obj
 
+pyramid :: R -> R -> R -> R -> SymbolicObj3
+pyramid r w d h =
+  extrudeRM r
+    (Left 0)
+    (Fn $ \x -> Left $ max 0.01 $ (h - x) / h)
+    (Left zero)
+    (rectR r (mk2 (-half w) (-half d)) (mk2 (half w) (half d)))
+    (Left h)
+  where
+    half x = x / 2
+
 
 
 class StupidImplicitVector a where
@@ -265,4 +264,7 @@ split obj =
       , intersect [ obj, translate (mk3 x1 y2 z1) b ]
       ]
 
+
+translateXY :: R -> R -> SymbolicObj3 -> SymbolicObj3
+translateXY x y = translate (mk3 x y 0)
 
