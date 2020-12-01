@@ -104,14 +104,14 @@ alignmentBB = \case
 slam :: Alignment -> SymbolicObj3 -> SymbolicObj3
 slam a = slamming (alignmentAxis a) (alignmentBB a)
 
-flush :: Alignment -> SymbolicObj3 -> SymbolicObj3 -> SymbolicObj3
-flush a s1 s2 = slam a s1 <> slam a s2
+flush :: SymbolicObj3 -> R -> Alignment -> SymbolicObj3 -> SymbolicObj3
+flush s1 r a s2 = inset s1 [Flush r a] s2
 
 allFlush :: Alignment -> [SymbolicObj3] -> SymbolicObj3
-allFlush = foldMap . slam
+allFlush a = center3 . foldMap (slam a)
 
-abut :: SymbolicObj3 -> Alignment -> SymbolicObj3 -> SymbolicObj3
-abut s1 a = inset s1 [Abut 0 a]
+abut :: SymbolicObj3 -> R -> Alignment -> SymbolicObj3 -> SymbolicObj3
+abut s1 r a = inset s1 [Abut r a]
 
 data Inset
   = Flush { insetDistance :: R, insetAlign :: Alignment }
@@ -137,7 +137,7 @@ complementedIfShould i@Flush{} = insetAlign i
 complementedIfShould i@Abut{} = alignmentComplement $ insetAlign i
 
 inset :: SymbolicObj3 -> [Inset] -> SymbolicObj3 -> SymbolicObj3
-inset s1 as s2 =
+inset s1 as s2 = center3 $
   foldr (\i -> slam $ complementedIfShould i) s1 as
     <> positioning (fmap unwrapInset as) s2
 
