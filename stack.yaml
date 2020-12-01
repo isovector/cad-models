@@ -4,6 +4,10 @@ packages:
 - .
 
 extra-deps:
-  - implicit-0.3.0.1
   - storable-endian-0.2.6
+  - ../ImplicitCAD
+  - quickspec-2.1.5@sha256:1d1cc020fa9075cb5fafd4056fe1d930d5763b954fa8200e57ce6aba057544b2,3557
+  - twee-lib-2.2@sha256:9fe9327505d8f450a94f2fc9eea74b292901b7992d520aa1dd4f0410fbe0e594,2112
+
+
 

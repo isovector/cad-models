@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ac51180a936080610aa10c8a1ea33523d3f126d1564faf0c3314a5b0e4fa7ca3
+-- hash: c6425c74d2b8f64de41df69d6135bab40690b907a33bfa1132fe2ecc77437c6d
 
 name:           cad
 version:        0.1.0.0
@@ -27,12 +27,15 @@ source-repository head
 
 library
   exposed-modules:
+      Alignment
       BinPartOrg
       ClockEnclosure
       Lib
       Merge
       Roomba
+      Roomba.Intake
       StdParts
+      TensionBarMount
       Text
   other-modules:
       Paths_cad

@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE RankNTypes           #-}
@@ -24,19 +25,19 @@ module Lib
   , L._y
   , L._z
   , module Control.Lens
+  , module Types
+  , carve
   ) where
 
-import           Control.Lens hiding (plate)
+import           Alignment
+import           Control.Lens hiding (plate, both)
 import           Graphics.Implicit
 import           Graphics.Implicit.Primitives (Object(getBox))
 import qualified Linear as L
 import           Linear.Matrix
 import           Linear.V2 hiding (R2)
-
-
-type R = Double
-type R2 = (R, R)
-type R3 = (R, R, R)
+import           Merge (carve)
+import           Types
 
 
 instance Semigroup Double where
@@ -55,12 +56,6 @@ wedge w d h
   $ rotate3 (degX 90)
   $ extrude d
   $ polygonR 0 [mk2 0 0, mk2 w 0, mk2 w h]
-
-mk2 :: R -> R -> R2
-mk2 = (,)
-
-mk3 :: R -> R -> R -> R3
-mk3 = (,,)
 
 box
     :: R  -- ^ width
@@ -119,20 +114,6 @@ extrudedSlot th h obj =
         , rect3R 0 (x, y, 0) (x', y', h)
         ]
 
-
-unpackV2 :: L.V2 a -> (a, a)
-unpackV2 (L.V2 x y) = (x, y)
-
-unpackV3 :: L.V3 a -> (a, a, a)
-unpackV3 (L.V3 x y z) = (x, y, z)
-
-packV2 :: (a, a) -> L.V2 a
-packV2 (x, y) = (L.V2 x y)
-
-packV3 :: (a, a, a) -> L.V3 a
-packV3 (x, y, z) = (L.V3 x y z)
-
-
 expandR2 :: R -> R2 -> R3
 expandR2 z (x, y) = (x, y, z)
 
@@ -170,12 +151,6 @@ rotMat theta =
     st = sin theta
 
 
-getOrigin :: Object obj vec => obj -> vec
-getOrigin = fst . getBox
-
-getExtent :: Object obj vec => obj -> vec
-getExtent = snd . getBox
-
 getSize :: SymbolicObj3 -> R3
 getSize obj = getExtent obj - getOrigin obj
 
@@ -188,6 +163,7 @@ expand (dx, dy, dz) obj =
       hf = (h + dz) / h
    in scale (wf,df, hf) obj
 
+
 pyramid :: R -> R -> R -> R -> SymbolicObj3
 pyramid r w d h =
   extrudeRM r
@@ -199,72 +175,19 @@ pyramid r w d h =
   where
     half x = x / 2
 
-
-
-class StupidImplicitVector a where
-  zero :: a
-
-instance StupidImplicitVector R2 where
-  zero = mk2 0 0
-
-instance StupidImplicitVector R3 where
-  zero = mk3 0 0 0
-
-
-
-slamming
-    :: (Num a, Object obj vec, StupidImplicitVector vec)
-    => Lens' vec a
-    -> (obj -> vec)
-    -> obj
-    -> obj
-slamming l boxsel obj =
-  let dist = negate $ boxsel obj ^. l
-      dpos = zero & l .~ dist
-   in translate dpos obj
-
-
-------------------------------------------------------------------------------
--- | Put it at z=0
-slamBottom :: SymbolicObj3 -> SymbolicObj3
-slamBottom = slamming _3 getOrigin
-
-slamTop :: SymbolicObj3 -> SymbolicObj3
-slamTop = slamming _3 getExtent
-
-slamLeft :: (Object obj vec, StupidImplicitVector vec, Field1 vec vec Double Double) => obj -> obj
-slamLeft = slamming _1 getOrigin
-
-slamRight :: (Object obj vec, StupidImplicitVector vec, Field1 vec vec Double Double) => obj -> obj
-slamRight = slamming _1 getExtent
-
-slamFront :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
-slamFront = slamming _2 getOrigin
-
-slamBack :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
-slamBack = slamming _2 getExtent
-
-center3 :: SymbolicObj3 -> SymbolicObj3
-center3 obj =
-  let (packV3 -> orig, packV3 -> ext) = getBox obj
-      dpos = negate $ orig + (ext - orig)  L.^* 0.5
-   in translate (unpackV3 dpos) obj
-
-
-split :: SymbolicObj3 -> [SymbolicObj3]
-split obj =
-  let ((x1, y1, z1), (x2, y2, z2)) = getBox obj
-      w = x2 - x1
-      d = y2 - y1
-      h = z2 - z1
-      b = centeredBox w d h
-   in [ intersect [ obj, translate (mk3 x1 y1 z1) b ]
-      , intersect [ obj, translate (mk3 x2 y1 z1) b ]
-      , intersect [ obj, translate (mk3 x2 y2 z1) b ]
-      , intersect [ obj, translate (mk3 x1 y2 z1) b ]
-      ]
-
-
 translateXY :: R -> R -> SymbolicObj3 -> SymbolicObj3
 translateXY x y = translate (mk3 x y 0)
+
+
+holderR
+  :: R  -- ^ roundness
+  -> R  -- ^ thickness
+  -> R
+  -> R
+  -> R
+  -> SymbolicObj3
+holderR r th x y z =
+  difference (slamTop $ centeredBoxR r (x + th * 2) (y + th * 2) z)
+    [ slamTop $ centeredBoxR r x y z
+    ]
 
