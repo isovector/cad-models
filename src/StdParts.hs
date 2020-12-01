@@ -6,18 +6,16 @@ import Lib
 yellowWheelBB :: SymbolicObj3
 yellowWheelBB =
   centeredBox
-    (wheel_width + total_clearance)
-    (wheel_diameter + total_clearance)
-    (wheel_diameter + total_clearance)
+    wheel_width
+    wheel_diameter
+    wheel_diameter
   where
-    wheel_width = 26
+    wheel_width = 28
     wheel_diameter = yellowWheelRadius * 2
-    clearance = 4
-    total_clearance = clearance * 2
 
 
 yellowWheelRadius :: R
-yellowWheelRadius = 68 / 2
+yellowWheelRadius = 70 / 2
 
 
 yellowWheelMotorWidth :: R
@@ -58,5 +56,5 @@ doubleAAHolderSlot = extrudedSlot 2 2 $ centeredBox 32.4 85.5 10
 
 
 ovonicLipoBatterySlot :: SymbolicObj3
-ovonicLipoBatterySlot = extrudedSlot 2 2 $ centeredBox 69 32 10
+ovonicLipoBatterySlot = extrudedSlot 2 2 $ centeredBox 30 36 10
 

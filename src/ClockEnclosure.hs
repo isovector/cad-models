@@ -21,7 +21,7 @@ base :: SymbolicObj3
 base =
   union
     [ plate
-    , difference [walls, viewhole, cordhole]
+    , difference walls [viewhole, cordhole]
     , wedge depth width vh_offset
     ]
 

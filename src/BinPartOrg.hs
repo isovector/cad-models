@@ -62,8 +62,8 @@ chambers sp h (w, d) bp =
   unionR 2
     [ translate (mk3 0 0 p_base) $
         differenceR 0.5
-          [ box w d (h - p_base)
-          , union
+          ( box w d (h - p_base))
+          [ union
               $ fmap (uncurry $ chamber (h - p_base))
               $ partition
                   sp
@@ -108,11 +108,11 @@ bpMxN m n = SplitW $ replicate m col
 stackingPin :: R -> SymbolicObj3
 stackingPin h =
   difference
-    [ union
+    ( union
         [ cylinder p_pin_rad h
         , translate (mk3 0 0 h) $ pinHead p_head_rad
-        ]
-    , pinHead p_hole_rad
+        ])
+    [ pinHead p_hole_rad
     ]
 
 
