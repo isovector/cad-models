@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c6425c74d2b8f64de41df69d6135bab40690b907a33bfa1132fe2ecc77437c6d
+-- hash: 4b5d3f4e3b8b96af8260bf3fd9805a5f79cb37aa6b981af2a94d9a9487fad20e
 
 name:           cad
 version:        0.1.0.0
@@ -34,9 +34,11 @@ library
       Merge
       Roomba
       Roomba.Intake
+      Roomba2
       StdParts
       TensionBarMount
       Text
+      Types
   other-modules:
       Paths_cad
   hs-source-dirs:
