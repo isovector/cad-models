@@ -8,6 +8,7 @@
 
 module Alignment where
 
+import Data.Monoid (Endo (..))
 import           Control.Lens hiding (plate, both)
 import           Graphics.Implicit.Primitives
 import qualified Linear as L
@@ -73,6 +74,15 @@ alignmentAxis = \case
    OnTop    -> _3
    OnBottom -> _3
 
+alignmentDirection :: Alignment -> Int
+alignmentDirection = \case
+   OnLeft   -> (-1)
+   OnRight  -> 1
+   OnFront  -> (-1)
+   OnBack   -> 1
+   OnTop    -> 1
+   OnBottom -> (-1)
+
 alignmentComplement :: Alignment -> Alignment
 alignmentComplement = \case
    OnLeft   -> OnRight
@@ -94,11 +104,42 @@ alignmentBB = \case
 slam :: Alignment -> SymbolicObj3 -> SymbolicObj3
 slam a = slamming (alignmentAxis a) (alignmentBB a)
 
-flush :: Alignment -> [SymbolicObj3] -> SymbolicObj3
-flush = foldMap . slam
+flush :: Alignment -> SymbolicObj3 -> SymbolicObj3 -> SymbolicObj3
+flush a s1 s2 = slam a s1 <> slam a s2
 
-abut :: Alignment -> SymbolicObj3 -> SymbolicObj3 -> SymbolicObj3
-abut a s1 s2 = slam a s1 <> slam (alignmentComplement a) s2
+allFlush :: Alignment -> [SymbolicObj3] -> SymbolicObj3
+allFlush = foldMap . slam
+
+abut :: SymbolicObj3 -> Alignment -> SymbolicObj3 -> SymbolicObj3
+abut s1 a = inset s1 [Abut 0 a]
+
+data Inset
+  = Flush { insetDistance :: R, insetAlign :: Alignment }
+  | Abut  { insetDistance :: R, insetAlign :: Alignment }
+  deriving (Eq, Ord, Show)
+
+
+positioning :: [(R, Alignment)] -> SymbolicObj3 -> SymbolicObj3
+positioning as s = flip appEndo s $ flip foldMap as $ \(v, a) ->
+  Endo $ \obj ->
+    translate
+       ( zero
+         & alignmentAxis a .~ v * fromIntegral (alignmentDirection a))
+       $ slam a obj
+
+unwrapInset :: Inset -> (R, Alignment)
+unwrapInset (Flush r a) = (-r, a)
+unwrapInset (Abut r a)  = (r, a)
+
+
+complementedIfShould :: Inset -> Alignment
+complementedIfShould i@Flush{} = insetAlign i
+complementedIfShould i@Abut{} = alignmentComplement $ insetAlign i
+
+inset :: SymbolicObj3 -> [Inset] -> SymbolicObj3 -> SymbolicObj3
+inset s1 as s2 =
+  foldr (\i -> slam $ complementedIfShould i) s1 as
+    <> positioning (fmap unwrapInset as) s2
 
 center3 :: SymbolicObj3 -> SymbolicObj3
 center3 obj =

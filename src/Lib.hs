@@ -26,7 +26,9 @@ module Lib
   , L._z
   , module Control.Lens
   , module Types
+  , module Alignment
   , carve
+  , inverse
   ) where
 
 import           Alignment
@@ -36,7 +38,7 @@ import           Graphics.Implicit.Primitives (Object(getBox))
 import qualified Linear as L
 import           Linear.Matrix
 import           Linear.V2 hiding (R2)
-import           Merge (carve)
+import           Merge (carve, inverse)
 import           Types
 
 
