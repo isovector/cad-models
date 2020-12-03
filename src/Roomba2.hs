@@ -1,14 +1,17 @@
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wall        #-}
 
 module Roomba2 where
 
 import Lib
 import Data.Foldable
+import Graphics.Implicit.Primitives
+import Graphics.Implicit.Definitions
 
 
 main :: IO ()
 main = writeSTL 2 "/tmp/roomba2.stl" $
-  center3 $ fanSystem
+  center3 $ eliminateEmpty $ carve $ dcGearedMotor <> cubeR 0 True (100, 100, 2)
 
 fanSystem :: SymbolicObj3
 fanSystem = carve $
@@ -150,4 +153,67 @@ wedgeThing x y hz tz th =
     [ translate (0, 0, th) $
         extrude hz $ polygonR 0 [(-x + th, 0), (x - th, 0), (0, x - th)]
     ]
+
+
+------------------------------------------------------------------------------
+
+
+dcWheelWithFender :: SymbolicObj3
+dcWheelWithFender = rotate3 (degY 90) $
+  let wheel = cylinder 35 28
+      wheelBB = translate (11, 0, 14) $ centeredBox 2 74 28
+      fender =
+        intersect
+          [ shell 2 $ outset 5 wheel
+          , cylinder 50 28
+          , translate (11, 0, 0) $ slamRight $ slamBottom $ cubeR 0 True (100, 100, 28)
+          ]
+   in flush fender 0 OnBottom $ abut (inverse $ cylinder 3 6) 0 OnTop $ inverse $ wheelBB <> wheel
+
+dcGearedMotor :: SymbolicObj3
+dcGearedMotor = translate (0, 0, negate $ 35 - 11) $ slamBottom $
+  let motor = cubeR 0 True (19, 22, 65)
+   in inset
+        dcWheelWithFender
+        [Abut 2 OnLeft, Flush (35 - 11 - 5.5) OnBottom]
+        $ mconcat
+            [ inverse $ slamBottom motor
+            , extrudedSlot 2 2 motor
+            , inverse $ slamTop $ centeredBox 3 5.5 5.5
+            ]
+
+
+------------------------------------------------------------------------------
+
+eliminateEmpty :: SymbolicObj3 -> SymbolicObj3
+eliminateEmpty = head . drop 10 . iterate filterEmpty
+
+filterEmpty :: SymbolicObj3 -> SymbolicObj3
+filterEmpty Empty3 = Empty3
+filterEmpty (Translate3 _ Empty3) = Empty3
+filterEmpty (Scale3 _ Empty3) = Empty3
+filterEmpty (Rotate3 _ Empty3) = Empty3
+filterEmpty (Mirror3 _ Empty3) = Empty3
+filterEmpty (Shell3 _ Empty3) = Empty3
+filterEmpty (Outset3 _ Empty3) = Empty3
+filterEmpty (Translate3 r s) = Translate3 r $ filterEmpty s
+filterEmpty (Scale3 r s) = Scale3 r $ filterEmpty s
+filterEmpty (Rotate3 r s) = Rotate3 r $ filterEmpty s
+filterEmpty (UnionR3 _ []) = Empty3
+filterEmpty (UnionR3 r s) = UnionR3 r $ filter (not . isEmpty) $ fmap filterEmpty s
+filterEmpty (DifferenceR3 r s ss) = DifferenceR3 r (filterEmpty s) $ fmap filterEmpty ss
+filterEmpty (IntersectR3 r ss) = IntersectR3 r $ fmap filterEmpty ss
+filterEmpty (Shell3 r s) = Shell3 r $ filterEmpty s
+filterEmpty (Outset3 r s) = Outset3 r $ filterEmpty s
+filterEmpty (Complement3 s) = Complement3 $ filterEmpty s
+filterEmpty (Mirror3 r s) = Mirror3 r $ filterEmpty s
+filterEmpty x@Full3{} = x
+filterEmpty x@CubeR{} = x
+filterEmpty x@Sphere{} = x
+filterEmpty x@Cylinder{} = x
+filterEmpty x = x
+
+isEmpty :: SymbolicObj3 -> Bool
+isEmpty Empty3 = True
+isEmpty _ = False
 

@@ -35,7 +35,7 @@ inverse x = Inverse x
 rip :: SymbolicObj3 -> (SymbolicObj3, SymbolicObj3)
 rip (Inverse x)          = swap $ rip x
 rip (UnionR3 _ l_s)      = foldMap rip l_s
-rip (IntersectR3 _ _)    = error "tried to rip an intersection and i avent thought of it"
+-- rip (IntersectR3 _ _)    = error "tried to rip an intersection and i avent thought of it"
 rip (Translate3 _ Empty) = (mempty, mempty)
 rip (Translate3 xyz l)   = both (translate xyz) $ rip l
 rip (Scale3 _ Empty)     = (mempty, mempty)
