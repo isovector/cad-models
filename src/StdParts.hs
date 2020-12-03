@@ -56,5 +56,5 @@ doubleAAHolderSlot = extrudedSlot 2 2 $ centeredBox 32.4 85.5 10
 
 
 ovonicLipoBatterySlot :: SymbolicObj3
-ovonicLipoBatterySlot = extrudedSlot 2 2 $ centeredBox 30 36 10
+ovonicLipoBatterySlot = extrudedSlot 2 2 $ centeredBox 35 76.5 10
 

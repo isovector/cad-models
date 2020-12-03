@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wall        #-}
 
@@ -6,19 +7,64 @@ module Roomba2 where
 import Lib
 import Data.Foldable
 import Graphics.Implicit.Primitives
-import Graphics.Implicit.Definitions
+import StdParts
+import Merge
 
 
 main :: IO ()
-main = writeSTL 2 "/tmp/roomba2.stl" $
-  center3 $ eliminateEmpty $ carve $ dcGearedMotor <> cubeR 0 True (100, 100, 2)
+main = writeSTL 0.75 "/tmp/roomba2.stl" $
+  center3 $ plateWithWheels
+
+
+plate :: SymbolicObj3
+plate = roundedPlate 5 50 200 200 2.5
+
+plateWalls :: SymbolicObj3
+plateWalls =
+  difference
+    (roundedPlate 5 50 200 200 53)
+    [ roundedPlate 5 50 196 196 53 ]
+
+plateBB :: SymbolicObj3
+plateBB = roundedPlate 5 50 200 200 200
+
+
+plateWithWheels :: SymbolicObj3
+plateWithWheels =
+  intersect
+    [ merge (slamBottom plateWalls) $
+        carve $  -- carve must be here, because it doesnt penetrate intersect
+          let reflected x = x <> mirror (1, 0, 0) x
+          in mconcat
+                [ plate
+                , reflected $ translateXY (-58) 23 $ dcGearedMotor
+                , translateXY 0 3 $ rotate3 (degZ 180) fanSystem
+                , thingsToMount
+                ]
+    , translate (0, 0, -2.5) $ slamBottom plateBB
+    ]
+
+thingsToMount :: SymbolicObj3
+thingsToMount =
+  mconcat
+    [ translateXY (-70) (-45) l298nSlot
+    , translateXY (0) (-85) arduinoMiniSlot
+    , translateXY (57) (-50) ovonicLipoBatterySlot
+    ]
+
+
+
+------------------------------------------------------------------------------
 
 fanSystem :: SymbolicObj3
-fanSystem = carve $
+fanSystem = translate (0, 0, -5) $ slamBottom $ center3 $
   insetting
     (slamBottom fanContainer)
     [ ( [Abut 60 OnBack]
-      , slamBottom bagHolderWithAlignment
+      , slamBottom bagIntakeSlot
+      )
+    , ( [Abut 0 OnTop, Flush 2 OnFront]
+      , inverse $ centeredBox 120 15 5
       )
     ]
 
@@ -34,7 +80,7 @@ fanMountWithExhaust = carve $
 fanMount :: SymbolicObj3
 fanMount = carve $
   insetting
-    (container 120 120 0 2)
+    fanMountPlatform
     [ ( [Flush 16 OnBack, Flush 16 OnRight, Flush (-2) OnBottom]
       , hole
       )
@@ -44,6 +90,13 @@ fanMount = carve $
     ]
   where
     hole = inverse $ cylinder 2 10
+
+fanMountPlatform :: SymbolicObj3
+fanMountPlatform =
+  intersect
+    [ container 120 120 0 2
+    , rotate3 (degZ 45) $ container 200 20 0 2
+    ]
 
 insetting
     :: Foldable t
@@ -64,38 +117,46 @@ fanContainer = carve $
     [Abut 2 OnTop, Flush 16 OnRight, Flush 22 OnFront]
     intakeTube
 
+intakeBit :: SymbolicObj3
+intakeBit = rotate3 (degX 180) $ container 120 15 15 2
+
+bagIntakeSlot :: SymbolicObj3
+bagIntakeSlot =
+  inset intakeBit [Abut 2 OnFront, Flush 0 OnBottom] bagHolderWithAlignment
+
 bagHolder :: SymbolicObj3
 bagHolder = carve $
   insetting
-    (container 120 50 28 2)
+    (container 100 50 15 2)
     [ ( [Abut 2 OnBack, Flush 2 OnBottom]
       , inverse $ cubeR 0 True (30, 15, 10)
       )
     ]
 
+
 bagHolderWithAlignment :: SymbolicObj3
 bagHolderWithAlignment =
   insetting
     bagHolder
-    [ ( [Flush 0 OnLeft, Flush 0 OnBack, Flush 2 OnBottom]
+    [ --( [Flush 0 OnLeft, Flush 0 OnBack, Flush 2 OnBottom]
       -- TODO(sandy): fix this carve
-      , cubeR 0 True (10, 10, 50)
-      )
-    , ( [Abut 2 OnFront, Flush 0 OnBottom]
-      , wedgeThing 48 60 15 30 2
+      -- , cubeR 0 True (10, 10, 50)
+      -- )
+      ( [Abut 2 OnFront, Flush 0 OnBottom]
+      , wedgeThing 48 60 13 17 2
       )
     ]
 
 
 
 roundedPlate
-    :: R  -- ^ rounding on "curved" side
-    -> R  -- ^ rounding on "flat" side
+    :: R  -- ^ rounding on "flat" side
+    -> R  -- ^ rounding on "rounded" side
     -> R  -- ^ width
     -> R  -- ^ depth
     -> R  -- ^ thickness
     -> SymbolicObj3
-roundedPlate r1 r2 x y z =
+roundedPlate r1 r2 x y z = slamTop $
   center3
     $ extrude z
     $ union
@@ -151,7 +212,7 @@ wedgeThing x y hz tz th =
   difference
     (extrude tz $ polygonR 0 [(-x, 0), (x, 0), (0, y)])
     [ translate (0, 0, th) $
-        extrude hz $ polygonR 0 [(-x + th, 0), (x - th, 0), (0, x - th)]
+        extrude hz $ polygonR 0 [(-x + th, 0), (x - th, 0), (0, y - th)]
     ]
 
 
@@ -171,7 +232,7 @@ dcWheelWithFender = rotate3 (degY 90) $
    in flush fender 0 OnBottom $ abut (inverse $ cylinder 3 6) 0 OnTop $ inverse $ wheelBB <> wheel
 
 dcGearedMotor :: SymbolicObj3
-dcGearedMotor = translate (0, 0, negate $ 35 - 11) $ slamBottom $
+dcGearedMotor = slamRight $ translate (0, 0, negate $ 35 - 11) $ slamBottom $
   let motor = cubeR 0 True (19, 22, 65)
    in inset
         dcWheelWithFender
@@ -181,39 +242,4 @@ dcGearedMotor = translate (0, 0, negate $ 35 - 11) $ slamBottom $
             , extrudedSlot 2 2 motor
             , inverse $ slamTop $ centeredBox 3 5.5 5.5
             ]
-
-
-------------------------------------------------------------------------------
-
-eliminateEmpty :: SymbolicObj3 -> SymbolicObj3
-eliminateEmpty = head . drop 10 . iterate filterEmpty
-
-filterEmpty :: SymbolicObj3 -> SymbolicObj3
-filterEmpty Empty3 = Empty3
-filterEmpty (Translate3 _ Empty3) = Empty3
-filterEmpty (Scale3 _ Empty3) = Empty3
-filterEmpty (Rotate3 _ Empty3) = Empty3
-filterEmpty (Mirror3 _ Empty3) = Empty3
-filterEmpty (Shell3 _ Empty3) = Empty3
-filterEmpty (Outset3 _ Empty3) = Empty3
-filterEmpty (Translate3 r s) = Translate3 r $ filterEmpty s
-filterEmpty (Scale3 r s) = Scale3 r $ filterEmpty s
-filterEmpty (Rotate3 r s) = Rotate3 r $ filterEmpty s
-filterEmpty (UnionR3 _ []) = Empty3
-filterEmpty (UnionR3 r s) = UnionR3 r $ filter (not . isEmpty) $ fmap filterEmpty s
-filterEmpty (DifferenceR3 r s ss) = DifferenceR3 r (filterEmpty s) $ fmap filterEmpty ss
-filterEmpty (IntersectR3 r ss) = IntersectR3 r $ fmap filterEmpty ss
-filterEmpty (Shell3 r s) = Shell3 r $ filterEmpty s
-filterEmpty (Outset3 r s) = Outset3 r $ filterEmpty s
-filterEmpty (Complement3 s) = Complement3 $ filterEmpty s
-filterEmpty (Mirror3 r s) = Mirror3 r $ filterEmpty s
-filterEmpty x@Full3{} = x
-filterEmpty x@CubeR{} = x
-filterEmpty x@Sphere{} = x
-filterEmpty x@Cylinder{} = x
-filterEmpty x = x
-
-isEmpty :: SymbolicObj3 -> Bool
-isEmpty Empty3 = True
-isEmpty _ = False
 
