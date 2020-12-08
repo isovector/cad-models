@@ -143,7 +143,7 @@ inset s1 as s2 = center3 $
 
 center3 :: SymbolicObj3 -> SymbolicObj3
 center3 obj =
-  let (packV3 -> orig, packV3 -> ext) = getBox obj
+  let (orig, ext) = getBox obj
       dpos = negate $ orig + (ext - orig)  L.^* 0.5
-   in translate (unpackV3 dpos) obj
+   in translate dpos obj
 

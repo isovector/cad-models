@@ -40,6 +40,7 @@ import           Linear.Matrix
 import           Linear.V2 hiding (R2)
 import           Merge (carve, inverse)
 import           Types
+import Linear hiding (R2, R3, zero)
 
 
 instance Semigroup Double where
@@ -64,7 +65,7 @@ box
     -> R  -- ^ height
     -> R  -- ^ depth
     -> SymbolicObj3
-box w h d = rect3R 0 (0, 0, 0) (w, h, d)
+box w h d = rect3R 0 (pure 0) (mk3 w h d)
 
 centeredBox
     :: R  -- ^ width
@@ -81,8 +82,8 @@ centeredBoxR
     -> SymbolicObj3
 centeredBoxR r w d h =
   rect3R r
-    (-half_w, -half_d, -half_h)
-    (half_w, half_d, half_h)
+    (mk3 (-half_w) (-half_d) (-half_h))
+    (mk3 half_w half_d half_h)
   where
     half_w = w / 2
     half_d = d / 2
@@ -109,15 +110,15 @@ extrudedSlot
 extrudedSlot th h obj =
   let spacing = th + 1
       obj' = shell th $ expand (mk3 spacing spacing h) obj
-      ((x, y, z), (x', y', _)) = getBox obj'
-      obj'' = translate (0, 0, negate z - th - 1) obj'
+      ((V3 x y z), (V3 x' y' _)) = getBox obj'
+      obj'' = translate (mk3 0 0 $ negate z - th - 1) obj'
    in intersect
         [ obj''
-        , rect3R 0 (x, y, 0) (x', y', h)
+        , rect3R 0 (mk3 x y 0) (mk3 x' y' h)
         ]
 
 expandR2 :: R -> R2 -> R3
-expandR2 z (x, y) = (x, y, z)
+expandR2 z (V2 x y) = mk3 x y z
 
 
 withPolarPos
@@ -141,7 +142,7 @@ polarPos
     -> R  -- ^ theta
     -> R3
 polarPos r theta =
-  expandR2 0 $ unpackV2 $ rotMat theta !* V2 0 r
+  expandR2 0 $ rotMat theta !* V2 0 r
 
 
 rotMat :: R -> L.M22 Double
@@ -158,12 +159,12 @@ getSize obj = getExtent obj - getOrigin obj
 
 
 expand :: R3 -> SymbolicObj3 -> SymbolicObj3
-expand (dx, dy, dz) obj =
-  let (w, d, h) = getSize obj
+expand (V3 dx dy dz) obj =
+  let (V3 w d h) = getSize obj
       wf = (w + dx) / w
       df = (d + dy) / d
       hf = (h + dz) / h
-   in scale (wf,df, hf) obj
+   in scale (mk3 wf df hf) obj
 
 
 pyramid :: R -> R -> R -> R -> SymbolicObj3

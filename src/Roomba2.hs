@@ -8,48 +8,78 @@ import Lib
 import Data.Foldable
 import Graphics.Implicit.Primitives
 import StdParts
-import Merge
+import Graphics.Implicit.Definitions
+import Simplify
+
+
+testSlice :: Alignment -> R -> SymbolicObj3 -> SymbolicObj3
+testSlice a th s =
+  intersect
+    [ slam a $ cubeR 0 True $ mk3 500 500 th
+    , slam a s
+    ]
 
 
 main :: IO ()
-main = writeSTL 0.75 "/tmp/roomba2.stl" $
-  center3 $ plateWithWheels
+main = writeSTL 0.5 "/tmp/roomba2.stl" $
+  center3 fanSystem
 
+plateRoundness :: R
+plateRoundness = 45
 
 plate :: SymbolicObj3
-plate = roundedPlate 5 50 200 200 2.5
+plate = freeze $
+  difference
+    (roundedPlate 5 plateRoundness 200 200 2)
+    [translate (mk3 0 0 $ -0.5) plateWalls]
+
+freeze :: SymbolicObj3 -> SymbolicObj3
+freeze = intersect . pure
 
 plateWalls :: SymbolicObj3
-plateWalls =
-  difference
-    (roundedPlate 5 50 200 200 53)
-    [ roundedPlate 5 50 196 196 53 ]
+plateWalls = reflected $
+  mconcat
+    [ freeze $ slamBottom $ difference
+        (roundedPlate 5 plateRoundness (x - th2) (y - th2) z)
+        [ roundedPlate 5 plateRoundness (x - th2 * 2) (y - th2 * 2) z
+        ]
+    , slamBottom $ translate (mk3 (negate $ x / 2 - 6) 0 0.5) $ m3MountingPlate
+    ]
+  where
+    x = 200 - th / 2
+    y = 200 - th / 2
+    z = 53
+    th = 2
+    th2 = 2 * th
 
 plateBB :: SymbolicObj3
-plateBB = roundedPlate 5 50 200 200 200
+plateBB = roundedPlate 5 plateRoundness 200 200 200
 
+reflected :: SymbolicObj3 -> SymbolicObj3
+reflected x = x <> mirror (mk3 1 0 0) x
 
 plateWithWheels :: SymbolicObj3
 plateWithWheels =
   intersect
-    [ merge (slamBottom plateWalls) $
-        carve $  -- carve must be here, because it doesnt penetrate intersect
-          let reflected x = x <> mirror (1, 0, 0) x
-          in mconcat
-                [ plate
-                , reflected $ translateXY (-58) 23 $ dcGearedMotor
-                , translateXY 0 3 $ rotate3 (degZ 180) fanSystem
-                , thingsToMount
-                ]
-    , translate (0, 0, -2.5) $ slamBottom plateBB
+    [ carve $  -- carve must be here, because it doesnt penetrate intersect
+        mconcat
+          [ plate
+          , reflected $ translateXY (-58) (-28) $ dcGearedMotor
+          , translate (mk3 0 1 0) fanSystem
+          , thingsToMount
+          , slamBottom plateWalls
+          ]
+    , translate (mk3 0 0 $ -2) $ slamBottom plateBB
     ]
 
 thingsToMount :: SymbolicObj3
 thingsToMount =
   mconcat
-    [ translateXY (-70) (-45) l298nSlot
-    , translateXY (0) (-85) arduinoMiniSlot
-    , translateXY (57) (-50) ovonicLipoBatterySlot
+    [ translateXY (-70) 45 l298nSlot
+    , translateXY (-72) 70 $ slamFront arduinoMiniSlot
+    , translateXY 0 80 casterMountingHoles
+    , translateXY 78 55 ovonicLipoBatterySlot
+    , translate (mk3 0 (-100) 30) hcSr04
     ]
 
 
@@ -57,7 +87,7 @@ thingsToMount =
 ------------------------------------------------------------------------------
 
 fanSystem :: SymbolicObj3
-fanSystem = translate (0, 0, -5) $ slamBottom $ center3 $
+fanSystem = slamBottom $ center3 $ carve $
   insetting
     (slamBottom fanContainer)
     [ ( [Abut 60 OnBack]
@@ -69,13 +99,13 @@ fanSystem = translate (0, 0, -5) $ slamBottom $ center3 $
     ]
 
 fanMountWithExhaust :: SymbolicObj3
-fanMountWithExhaust = carve $
+fanMountWithExhaust = center3 $ carve $
   inset
     fanMount
     [Flush 2 OnLeft, Abut 2 OnFront, Flush 4 OnBottom]
     exhaustHole
   where
-    exhaustHole = inverse $ cubeR 0 False (58, 100, 28)
+    exhaustHole = inverse $ cubeR 0 False $ mk3 58 100 28
 
 fanMount :: SymbolicObj3
 fanMount = carve $
@@ -106,7 +136,16 @@ insetting
 insetting = foldl' (uncurry . inset)
 
 intakeTube :: SymbolicObj3
-intakeTube = barrel 40 30 2
+intakeTube = mconcat
+  [ slamBottom $
+      mconcat
+        [ slamTop $ barrel (84/2) 35 2
+        , slamTop $ cylinder (96/2) 2
+        ]
+    -- BUG: these are 2mm inside of the tube!!
+  , reflected $ translateXY 42 0 m3MountingPlate
+  , rotate3 (degZ 90) $ translateXY 42 0 m3MountingPlate
+  ]
 
 
 
@@ -114,25 +153,31 @@ fanContainer :: SymbolicObj3
 fanContainer = carve $
   inset
     fanMountWithExhaust
-    [Abut 2 OnTop, Flush 16 OnRight, Flush 22 OnFront]
+    [Abut 2 OnTop, Flush 8 OnRight, Flush (22-8) OnFront]
     intakeTube
 
 intakeBit :: SymbolicObj3
-intakeBit = rotate3 (degX 180) $ container 120 15 15 2
+intakeBit =
+  mconcat
+    [ slamBottom $ rotate3 (degX 180) $ container 120 15 15 2
+    , reflected $ translateXY 64 0 m3MountingPlate
+    ]
 
 bagIntakeSlot :: SymbolicObj3
 bagIntakeSlot =
   inset intakeBit [Abut 2 OnFront, Flush 0 OnBottom] bagHolderWithAlignment
 
 bagHolder :: SymbolicObj3
-bagHolder = carve $
-  insetting
-    (container 100 50 15 2)
-    [ ( [Abut 2 OnBack, Flush 2 OnBottom]
-      , inverse $ cubeR 0 True (30, 15, 10)
-      )
-    ]
-
+bagHolder = carve $ mconcat
+  [ slamBottom $ insetting
+      (container 100 50 15 2)
+      [ ( [Abut 2 OnBack, Flush 2 OnBottom]
+        , inverse $ cubeR 0 True $ mk3 30 15 10
+        )
+      ]
+  , reflected $ translateXY 54 (-5) m3MountingPlate
+  , reflected $ translateXY 54 20 m3MountingPlate
+  ]
 
 bagHolderWithAlignment :: SymbolicObj3
 bagHolderWithAlignment =
@@ -174,7 +219,7 @@ container
     -> SymbolicObj3
 container x y z th = carve $
   allFlush OnTop
-    [ cubeR 0 True (x + 2 * th, y + 2 * th, z + th)
+    [ cubeR 0 True $ mk3 (x + 2 * th) (y + 2 * th) (z + th)
     , inverse $ centeredBox x y z
     ]
 
@@ -210,36 +255,48 @@ wedgeThing
   -> SymbolicObj3
 wedgeThing x y hz tz th =
   difference
-    (extrude tz $ polygonR 0 [(-x, 0), (x, 0), (0, y)])
-    [ translate (0, 0, th) $
-        extrude hz $ polygonR 0 [(-x + th, 0), (x - th, 0), (0, y - th)]
+    (extrude tz $ polygonR 0 [(mk2 (-x) 0), (mk2 x 0), (mk2 0 y)])
+    [ translate (mk3 0 0 th) $
+        extrude hz $ polygonR 0 [mk2 (-x + th) 0, mk2 (x - th) 0, mk2 0 (y - th)]
     ]
 
 
 ------------------------------------------------------------------------------
 
 
-dcWheelWithFender :: SymbolicObj3
-dcWheelWithFender = rotate3 (degY 90) $
+dcWheelWithWell :: SymbolicObj3
+dcWheelWithWell = rotate3 (degY 90) $
   let wheel = cylinder 35 28
-      wheelBB = translate (11, 0, 14) $ centeredBox 2 74 28
+      wheelBB = translate (mk3 11 0 14) $ centeredBox 2 74 28
       fender =
         intersect
           [ shell 2 $ outset 5 wheel
           , cylinder 50 28
-          , translate (11, 0, 0) $ slamRight $ slamBottom $ cubeR 0 True (100, 100, 28)
+          , translate (mk3 11 0 0) $ slamRight $ slamBottom $ cubeR 0 True (mk3 100 100 28)
           ]
-   in flush fender 0 OnBottom $ abut (inverse $ cylinder 3 6) 0 OnTop $ inverse $ wheelBB <> wheel
+   in flush fender 0 OnBottom $ abut (inverse $ cylinder 3 6) 0 OnTop $ inverse $ wheelBB <> outset 2.5 wheel
 
 dcGearedMotor :: SymbolicObj3
-dcGearedMotor = slamRight $ translate (0, 0, negate $ 35 - 11) $ slamBottom $
-  let motor = cubeR 0 True (19, 22, 65)
+dcGearedMotor = slamRight $ translate (mk3 0 0 $ negate $ 35 - 11) $ slamBottom $
+  let motor = cubeR 0 True $ mk3 19 22 65
    in inset
-        dcWheelWithFender
+        dcWheelWithWell
         [Abut 2 OnLeft, Flush (35 - 11 - 5.5) OnBottom]
         $ mconcat
             [ inverse $ slamBottom motor
-            , extrudedSlot 2 2 motor
+            , extrudedSlot 2 6.5 motor
             , inverse $ slamTop $ centeredBox 3 5.5 5.5
             ]
+
+
+hcSr04 :: SymbolicObj3
+hcSr04 = inverse $ center3 $ rotate3 (degX 90) $ reflected $ translateXY 18 0 $ cylinder 8.5 11
+
+------------------------------------------------------------------------------
+
+casterMountingHoles :: SymbolicObj3
+casterMountingHoles =
+  inverse $ center3 $ reflected $ translateXY (38/2) 0 $ cylinder (3.4 / 2) 9
+
+
 

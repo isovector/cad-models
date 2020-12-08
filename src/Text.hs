@@ -16,12 +16,12 @@ import Graphics.Implicit.MathUtil (distFromLineSeg)
 
 main :: IO ()
 main = do
-  writeSTL 0.25 "/tmp/roomba.stl" $ do
-    extrude 1 $ text 5 "hello"
+  writeSTL 0.25 "/tmp/text.stl" $ do
+    extrude 1 $ text 5 "hello world"
 
 text :: R -> String -> SymbolicObj2
 text h str =
-  let points = fmap unpackV2 $ renderPath $ textSVG str h
+  let points = renderPath $ textSVG str h
       poly = polygonR 0 points
    in poly
 

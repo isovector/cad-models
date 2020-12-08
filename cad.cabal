@@ -50,6 +50,7 @@ library
     , implicit
     , lens
     , linear
+    , generic-deriving
   default-language: Haskell2010
 
 executable cad-exe
