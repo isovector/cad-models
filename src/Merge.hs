@@ -49,6 +49,9 @@ rip (Shared3 (DifferenceR r a b)) =
    in (keep_a, unionR r $ cut_a : b)
 rip x                    = (x, mempty)
 
+cut :: SymbolicObj3 -> SymbolicObj3
+cut = Shared3 . DifferenceR 0 mempty . pure . snd . rip
+
 carve :: SymbolicObj3 -> SymbolicObj3
 carve = eliminateEmpty . uncurry difference . fmap pure . rip
 

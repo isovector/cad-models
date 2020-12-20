@@ -46,7 +46,7 @@ arduinoMiniSlot =
     mconcat
       [ slamLeft $ extrudedSlot 2 2 $ centeredBox 45 18.5 10
         -- usb port
-      , inverse $ translate (mk3 (-5) 0 1.6) $ slamBottom $ slamLeft $ centeredBox 10 8 4.4
+      , inverse $ translate (mk3 (-5) 0 0) $ slamBottom $ slamLeft $ centeredBox 10 8 4.4
       ]
 
 
@@ -68,7 +68,7 @@ doubleAAHolderSlot = extrudedSlot 2 2 $ centeredBox 32.4 85.5 10
 ovonicLipoBatterySlot :: SymbolicObj3
 ovonicLipoBatterySlot = slamBottom $ center3 $ mconcat
   [ slamFront $ slamRight $ extrudedSlot 2 2 $
-      centeredBox 35 78 29
+      centeredBox 35 68 29
     -- charging port
   , inverse $ translate (mk3 5 10 $ 29+2) $ slamBottom $ slamFront $ slamRight $ centeredBox 10 13.5 4
   ]
@@ -103,7 +103,7 @@ m3MountingPlate = slamBottom $ center3 $ carve $
           [ slamBottom $ centeredBox 8 8 2
           , translate (mk3 0 0 $ -2) $ slamBottom $ inverse $ center3 $ cylinder (3.1/2) 5
           ]
-    , slamRight $ slamBottom $ centeredBox 2 6 8
+    , slamRight $ slamBottom $ centeredBox 2 8 8
     ]
 
 m3Hole :: SymbolicObj3

@@ -11,8 +11,6 @@ import Diagrams (viewLoc, Point (..), Located, Offset(OffsetClosed))
 import Diagrams.Trail
 import Graphics.SVGFonts (textSVG)
 import Control.Monad
-import Data.List (nub, genericLength, genericIndex)
-import Graphics.Implicit.MathUtil (distFromLineSeg)
 
 main :: IO ()
 main = do
@@ -95,30 +93,4 @@ renderSeg2 l =
 
 renderPath2 :: Path V2 Double -> [[V2 Double]]
 renderPath2 = fmap (join . fmap renderSeg2) . pathLocSegments
-
-getImplicit2 :: [R2] -> R2 -> R
-getImplicit2 points =
-    \p -> let
-        pair :: Int -> (ℝ2,ℝ2)
-        pair n = (points `genericIndex` n, points `genericIndex` mod (n + 1) (genericLength points) )
-        pairs :: [(ℝ2,ℝ2)]
-        pairs =  [ pair n | n <- [0 .. genericLength points - 1] ]
-        relativePairs =  fmap (\(a,b) -> (a ^-^ p, b ^-^ p) ) pairs
-        crossing_points =
-            [ x2 - y2*(x2-x1)/(y2-y1)
-            | ((x1,y1), (x2,y2)) <-relativePairs
-            , ( (y2 <= 0) && (y1 >= 0) ) || ( (y2 >= 0) && (y1 <= 0) ) ]
-        -- FIXME: use partition instead?
-        seemsInRight = odd . length . filter (>0) $ nub crossing_points
-        seemsInLeft = odd . length . filter (<0) $ nub crossing_points
-        isIn = seemsInRight && seemsInLeft
-        dists :: [ℝ]
-        dists = fmap (distFromLineSeg p) pairs
-    in
-        minimum dists * if isIn then -1 else 1
-
-(^-^) :: R2 -> R2 -> R2
-(^-^) (a, b) (a', b') = (a - a', b - b')
-
-infixl 6 ^-^
 

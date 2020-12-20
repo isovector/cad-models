@@ -13,8 +13,8 @@ main = writeSTL 0.25 "/tmp/mount.stl" $
    in difference
         ( slamFront $ difference
           ( slamBottom $ union
-            [ mirror (1, 1, 0) base
-            , mirror (-1, 1, 0) base
+            [ mirror (V3 1 1 0) base
+            , mirror (V3 (-1) 1 0) base
             , base
             ])
           [ translate (mk3 0 0 (-6))
