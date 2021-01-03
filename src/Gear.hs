@@ -20,7 +20,7 @@ main = do
 gear' :: Int -> R -> R -> SymbolicObj3
 gear' n rad th =
   let r = rad + 0.4
-   in extrude th $ gear n 1 (r - 1.90) (r + 0.7)
+   in flip extrude th $ gear n 1 (r - 1.90) (r + 0.7)
 
 
 gear
@@ -29,7 +29,7 @@ gear
   -> R    -- ^ inner radius
   -> R    -- ^ outer radius
   -> SymbolicObj2
-gear n th r0 r = polygonR 0 $ do
+gear n th r0 r = polygon $ do
   let dtheta = 2 * pi / fromIntegral n
       half_th = th / 2
       tooth_arc_len = half_th / r0

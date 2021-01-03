@@ -37,17 +37,12 @@ import           Graphics.Implicit
 import           Graphics.Implicit.Primitives (Object(getBox))
 import qualified Linear as L
 import           Linear.Matrix
-import           Linear.V2 hiding (R2)
 import           Merge (carve, inverse)
 import           Types
-import Linear hiding (R2, R3, zero)
 
 
 instance Semigroup Double where
   (<>) = (+)
-
-extrude :: R -> SymbolicObj2 -> SymbolicObj3
-extrude = flip $ extrudeR 0
 
 wedge
     :: R  -- ^ width
@@ -57,31 +52,23 @@ wedge
 wedge w d h
   = rotate3 (degZ 90)
   $ rotate3 (degX 90)
-  $ extrude d
-  $ polygonR 0 [mk2 0 0, mk2 w 0, mk2 w h]
+  $ flip extrude d
+  $ polygon [mk2 0 0, mk2 w 0, mk2 w h]
 
 box
     :: R  -- ^ width
     -> R  -- ^ height
     -> R  -- ^ depth
     -> SymbolicObj3
-box w h d = rect3R 0 (pure 0) (mk3 w h d)
+box w h d = rect3 (pure 0) (mk3 w h d)
 
 centeredBox
     :: R  -- ^ width
     -> R  -- ^ depth
     -> R  -- ^ height
     -> SymbolicObj3
-centeredBox = centeredBoxR 0
-
-centeredBoxR
-    :: R
-    -> R  -- ^ width
-    -> R  -- ^ depth
-    -> R  -- ^ height
-    -> SymbolicObj3
-centeredBoxR r w d h =
-  rect3R r
+centeredBox w d h =
+  rect3
     (mk3 (-half_w) (-half_d) (-half_h))
     (mk3 half_w half_d half_h)
   where
@@ -114,7 +101,7 @@ extrudedSlot th h obj =
       obj'' = translate (mk3 0 0 $ negate z - th - 1) obj'
    in intersect
         [ obj''
-        , rect3R 0 (mk3 x y 0) (mk3 x' y' h)
+        , rect3 (mk3 x y 0) (mk3 x' y' h)
         ]
 
 expandR2 :: R -> R2 -> R3
@@ -167,13 +154,13 @@ expand (V3 dx dy dz) obj =
    in scale (mk3 wf df hf) obj
 
 
-pyramid :: R -> R -> R -> R -> SymbolicObj3
-pyramid r w d h =
-  extrudeRM r
+pyramid :: R -> R -> R -> SymbolicObj3
+pyramid w d h =
+  extrudeM
     (Left 0)
     (Fn $ \x -> Left $ max 0.01 $ (h - x) / h)
-    (Left zero)
-    (rectR r (mk2 (-half w) (-half d)) (mk2 (half w) (half d)))
+    (Left 0)
+    (rect (mk2 (-half w) (-half d)) (mk2 (half w) (half d)))
     (Left h)
   where
     half x = x / 2
@@ -183,14 +170,43 @@ translateXY x y = translate (mk3 x y 0)
 
 
 holderR
-  :: R  -- ^ roundness
-  -> R  -- ^ thickness
+  :: R  -- ^ thickness
   -> R
   -> R
   -> R
   -> SymbolicObj3
-holderR r th x y z =
-  difference (slamTop $ centeredBoxR r (x + th * 2) (y + th * 2) z)
-    [ slamTop $ centeredBoxR r x y z
+holderR th x y z =
+  difference (slamTop $ centeredBox (x + th * 2) (y + th * 2) z)
+    [ slamTop $ centeredBox x y z
     ]
+
+testSlice :: Alignment -> R -> SymbolicObj3 -> SymbolicObj3
+testSlice a th s =
+  intersect
+    [ slam a $ cube True $ mk3 500 500 th
+    , slam a s
+    ]
+
+
+roundedPlate
+    :: R  -- ^ rounding on "flat" side
+    -> R  -- ^ rounding on "rounded" side
+    -> R  -- ^ width
+    -> R  -- ^ depth
+    -> R  -- ^ thickness
+    -> SymbolicObj3
+roundedPlate r1 r2 x y z = slamTop $
+  center3
+    $ flip extrude z
+    $ union
+    $ let half = y / 2
+       in [ slamBack $ withRounding r2 $ rect 0 $ mk2 x y
+          , slamBack $ withRounding r1 $ rect 0 $ mk2 x half
+          ]
+
+mirrored :: R3 -> SymbolicObj3 -> SymbolicObj3
+mirrored v obj = obj <> mirror v obj
+
+reflected :: SymbolicObj3 -> SymbolicObj3
+reflected = mirrored $ mk3 1 0 0
 

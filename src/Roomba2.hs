@@ -4,26 +4,32 @@
 
 module Roomba2 where
 
+import Boxes
 import Lib
 import Data.Foldable
 import Graphics.Implicit.Primitives
 import StdParts
 import Graphics.Implicit.Definitions
-import Simplify
-import Merge (cut)
+import Merge (merging, cut)
 
-
-testSlice :: Alignment -> R -> SymbolicObj3 -> SymbolicObj3
-testSlice a th s =
-  intersect
-    [ slam a $ cubeR 0 True $ mk3 500 500 th
-    , slam a s
-    ]
 
 
 main :: IO ()
-main = writeSTL 0.5 "/tmp/roomba2.stl" $
-  center3 $ arduinoTemp
+main = writeSTL 2 "/tmp/roomba2.stl" $
+  center3 $ blowerContainer
+    -- slamBottom blowerMount2 <> slamTop ( slamBottom bagContainerLid2 <> slamTop (bagContainer2))
+
+
+finishedBagContainerLid :: IO ()
+finishedBagContainerLid = writeSTL 0.5 "/tmp/final-bag-container-lid.stl" $ bagContainerLid2
+
+finishedBagContainer :: IO ()
+finishedBagContainer = writeSTL 0.5 "/tmp/final-bag-container.stl" $ bagContainer2
+
+finishedBlowerMount :: IO ()
+finishedBlowerMount = writeSTL 0.5 "/tmp/final-blower-mount.stl" $ blowerMount2
+
+
 
 plateRoundness :: R
 plateRoundness = 45
@@ -56,9 +62,6 @@ plateWalls = reflected $
 plateBB :: SymbolicObj3
 plateBB = roundedPlate 5 plateRoundness 200 200 200
 
-reflected :: SymbolicObj3 -> SymbolicObj3
-reflected = mirrored $ mk3 1 0 0
-
 plateWithWheels :: SymbolicObj3
 plateWithWheels =
   intersect
@@ -66,11 +69,7 @@ plateWithWheels =
         mconcat
           [ plate
           , reflected $ translateXY (-62) (-28) dcGearedMotor
-          , reflected $ translateXY (-90) (15) m3Hole
-          , reflected $ translateXY (-80) (15) m3Hole
-          , reflected $ translateXY (-85) (-70) m3Hole
-          , reflected $ translateXY (-75) (-70) m3Hole
-          , cut $ translate (mk3 0 1 0) fanSystem
+          -- , cut $ translate (mk3 0 1 0) fanSystem
           , thingsToMount
           -- , slamBottom plateWalls
           ]
@@ -79,13 +78,13 @@ plateWithWheels =
 
 thingsToMount :: SymbolicObj3
 thingsToMount =
-  mconcat
-    [ translateXY (-70) 45 l298nSlot
-    , translateXY (-72) 70 $ slamFront arduinoMiniSlot
-    , translateXY 0 80 casterMountingHoles
-    , translateXY 78 92 $ slamBack ovonicLipoBatterySlot
-    , translate (mk3 0 (-100) 30) hcSr04
-    ]
+  mconcat []
+    -- [ translateXY (-70) 45 l298nSlot
+    -- , translateXY (-72) 70 $ slamFront arduinoMiniSlot
+    -- , translateXY 0 80 casterMountingHoles
+    -- , translateXY 78 92 $ slamBack ovonicLipoBatterySlot
+    -- , translate (mk3 0 (-100) 30) hcSr04
+    -- ]
 
 
 
@@ -110,7 +109,9 @@ fanMountWithExhaust = center3 $ carve $
     [Flush 2 OnLeft, Abut 2 OnFront, Flush 4 OnBottom]
     exhaustHole
   where
-    exhaustHole = inverse $ cubeR 0 False $ mk3 58 100 28
+    exhaustHole = inverse $ cube False $ mk3 58 100 28
+
+
 
 fanMount :: SymbolicObj3
 fanMount = carve $
@@ -133,12 +134,71 @@ fanMountPlatform =
     , rotate3 (degZ 45) $ container 200 20 0 2
     ]
 
-insetting
-    :: Foldable t
-    => SymbolicObj3
-    -> t ([Inset], SymbolicObj3)
-    -> SymbolicObj3
-insetting = foldl' (uncurry . inset)
+
+
+-----------------
+
+
+blowerContainer :: SymbolicObj3
+blowerContainer =
+  -- inlined from other combinators because I couldn't figure out the math
+   difference
+    (translate (V3 (-62.0) (-62.0) 7.5) $ cube False $ V3 124.0 124.0 18.0)
+    [ union
+      [ translate (V3 (-60.0) (-60.0) 9.5) $ cube False $ V3 120.0 120.0 16.0
+      , translate (V3 (-60.0) 60.0 11.5) $ cube False $ V3 58.0 100.0 28.0
+      , centeredAirHole
+      ]
+    ]
+
+
+centeredAirHole :: SymbolicObj3
+centeredAirHole = translate (V3 6 0 (-23.5)) (cylinder 40.0 50.0)
+
+
+blowerMount :: SymbolicObj3
+blowerMount = mconcat
+  [ -- slamBack $ slamBottom $ blowerContainer
+    slamTop $ slamBack $ withoutCubeFaces [OnTop, OnBack, OnBottom] 120 120 35 2
+  ]
+
+blowerMount2 :: SymbolicObj3
+blowerMount2 = carve $
+  mconcat
+    [ slamBottom $ slamBack $ blowerMount
+    , translate (V3 0 12 9) $ slamBottom $ slamBack $ inverse $ rotate3 (degY 90) $ center3 $ cylinder 12 500
+    ]
+
+bagContainer2 :: SymbolicObj3
+bagContainer2 =
+  intersect
+    [ merging (slamBottom $ insideContainer 119.8 119.8 32.9 2)
+      [ translate (V3 0 (-20) (-2)) $ slamBottom $ withoutCubeFaces [OnTop, OnBottom] 80 15 6 1
+      ]
+    , slamBottom $ centeredBox 119.8 119.8 32.9
+    ]
+
+
+bagContainerLid2 :: SymbolicObj3
+bagContainerLid2 =
+  difference
+    ( mconcat
+        [ slamTop $ mirror (V3 0 0 1) $ insideContainer (117.7 - 0.8 * 2) (117.7 - 0.8 * 2) 5 1.2
+        , slamTop $ atSamePlace centeredAirHole
+            $ reflected
+            $ translateXY 40 0
+            $ withoutCubeFaces [OnTop, OnLeft, OnFront] 10 80 10 1.2
+        , slamTop $ insideContainer 119.8 119.8 0 1.2
+        ]
+    )
+    [ centeredAirHole
+    ]
+
+
+
+-----------------
+
+
 
 intakeTube :: SymbolicObj3
 intakeTube = mconcat
@@ -148,8 +208,8 @@ intakeTube = mconcat
         , slamTop $ cylinder (96/2) 2
         ]
     -- BUG: these are 2mm inside of the tube!!
-  , reflected $ translateXY 42 0 m3MountingPlate
-  , rotate3 (degZ 90) $ translateXY 42 0 m3MountingPlate
+  -- , reflected $ translateXY 42 0 m3MountingPlate
+  -- , rotate3 (degZ 90) $ translateXY 42 0 m3MountingPlate
   ]
 
 
@@ -184,7 +244,7 @@ mkBagVentilationHole w s =
     insetting
       s
       [ ( [Abut 2 OnBack, Flush 2 OnBottom]
-        , inverse $ cubeR 0 True $ mk3 w 15 10
+        , inverse $ cube True $ mk3 w 15 10
         )
       ]
 
@@ -194,65 +254,12 @@ bagHolderWithAlignment =
     bagHolder
     [ --( [Flush 0 OnLeft, Flush 0 OnBack, Flush 2 OnBottom]
       -- TODO(sandy): fix this carve
-      -- , cubeR 0 True (10, 10, 50)
+      -- , cube True (10, 10, 50)
       -- )
       ( [Abut 2 OnFront, Flush 0 OnBottom]
       , wedgeThing 48 60 13 17 2
       )
     ]
-
-
-
-roundedPlate
-    :: R  -- ^ rounding on "flat" side
-    -> R  -- ^ rounding on "rounded" side
-    -> R  -- ^ width
-    -> R  -- ^ depth
-    -> R  -- ^ thickness
-    -> SymbolicObj3
-roundedPlate r1 r2 x y z = slamTop $
-  center3
-    $ extrude z
-    $ union
-    $ let half = y / 2
-       in [ slamBack $ rectR r2 zero $ mk2 x y
-          , slamBack $ rectR r1 zero $ mk2 x half
-          ]
-
-
-container
-    :: R -- ^ w
-    -> R -- ^ d
-    -> R -- ^ h
-    -> R -- ^ th
-    -> SymbolicObj3
-container x y z th = carve $
-  allFlush OnTop
-    [ cubeR 0 True $ mk3 (x + 2 * th) (y + 2 * th) (z + th)
-    , inverse $ centeredBox x y z
-    ]
-
-
-barrel
-    :: R  -- ^ radius
-    -> R  -- ^ height
-    -> R  -- ^ thickness
-    -> SymbolicObj3
-barrel r h th = carve $
-  allFlush OnTop
-    [ cylinder r h
-    , inverse $ cylinder (r - th) (h - th)
-    ]
-
-tube
-    :: R  -- ^ radius
-    -> R  -- ^ height
-    -> R  -- ^ thickness
-    -> SymbolicObj3
-tube r h th =
-  difference
-      (cylinder r h)
-      [ cylinder (r - th) h ]
 
 
 wedgeThing
@@ -264,9 +271,9 @@ wedgeThing
   -> SymbolicObj3
 wedgeThing x y hz tz th =
   difference
-    (extrude tz $ polygonR 0 [(mk2 (-x) 0), (mk2 x 0), (mk2 0 y)])
+    (flip extrude tz $ polygon [(mk2 (-x) 0), (mk2 x 0), (mk2 0 y)])
     [ translate (mk3 0 0 th) $
-        extrude hz $ polygonR 0 [mk2 (-x + th) 0, mk2 (x - th) 0, mk2 0 (y - th)]
+        flip extrude hz $ polygon [mk2 (-x + th) 0, mk2 (x - th) 0, mk2 0 (y - th)]
     ]
 
 
@@ -282,13 +289,13 @@ dcWheelWithWell = rotate3 (degY 90) $
         intersect
           [ shell 2 $ outset 5 wheel
           , cylinder 50 28
-          , translate (mk3 11 0 0) $ slamRight $ slamBottom $ cubeR 0 True (mk3 100 100 28)
+          , translate (mk3 11 0 0) $ slamRight $ slamBottom $ cube True (mk3 100 100 28)
           ]
    in flush fender 0 OnBottom $ inverse $ wheelBB <> outset 2.5 wheel
 
 dcGearedMotor :: SymbolicObj3
 dcGearedMotor = slamRight $ translate (mk3 0 0 $ negate $ 35 - 11) $ slamBottom $
-  let motor = cubeR 0 True $ mk3 19 22 65
+  let motor = cube True $ mk3 19 22 65
    in inset
         dcWheelWithWell
         [Abut 1.5 OnLeft, Flush (35 - 11 - 5.5) OnBottom]
@@ -331,9 +338,6 @@ casterMountingHoles =
 filterTapHolder :: SymbolicObj3
 filterTapHolder =
   reflected $ translateXY (48 - 0.5 / 2) 0 $ slamRight $ centeredBox 5 2 20
-
-mirrored :: R3 -> SymbolicObj3 -> SymbolicObj3
-mirrored v obj = obj <> mirror v obj
 
 filterTap :: SymbolicObj3
 filterTap = mirrored (V3 0 0 1) $ slamTop $ mconcat $
@@ -403,3 +407,4 @@ arduinoTemp =
         -- usb port
       , inverse $ translate (mk3 (-5) 0 1.5) $ slamBottom $ slamLeft $ centeredBox 10 8 4.4
       ]
+

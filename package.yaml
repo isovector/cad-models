@@ -24,8 +24,9 @@ dependencies:
 - implicit
 - linear
 - lens
-- SVGFonts
-- diagrams-lib
+- QuickCheck
+# - SVGFonts
+# - diagrams-lib
 
 library:
   source-dirs: src

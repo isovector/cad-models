@@ -3,11 +3,12 @@
 
 module Merge where
 
+import GHC.Generics
 import Graphics.Implicit
 import Graphics.Implicit.Definitions
 import Data.Foldable
 import Linear (Quaternion(Quaternion))
-import Graphics.Implicit.Primitives (outset, rotateQ)
+import Graphics.Implicit.Primitives (pattern Shared, outset, rotateQ)
 import Data.Tuple (swap)
 
 merge :: SymbolicObj3 -> SymbolicObj3 -> SymbolicObj3
@@ -35,16 +36,13 @@ inverse x = Inverse x
 
 rip :: SymbolicObj3 -> (SymbolicObj3, SymbolicObj3)
 rip (Inverse x)          = swap $ rip x
-rip (Shared3 (UnionR _ l_s))      = foldMap rip l_s
-rip x@(Shared3(IntersectR{}))      = (x, mempty)
-rip (Shared3 (Translate _ Empty3)) = (mempty, mempty)
-rip (Shared3 (Translate xyz l))   = both (translate xyz) $ rip l
-rip (Shared3 (Scale _ Empty3))     = (mempty, mempty)
-rip (Shared3 (Scale xyz l))       = both (scale xyz) $ rip l
-rip (Rotate3 _ Empty3)    = (mempty, mempty)
-rip (Rotate3 xyz l)      = both (Rotate3 xyz) $ rip l
-rip (Shared3 (Mirror xyz l))      = both (Shared3 . Mirror xyz) $ rip l
-rip (Shared3 (DifferenceR r a b)) =
+rip (Shared (UnionR _ l_s))      = foldMap rip l_s
+rip x@(Shared (IntersectR{}))      = (x, mempty)
+rip (Shared (Translate xyz l))   = both (translate xyz) $ rip l
+rip (Shared (Scale xyz l))       = both (scale xyz) $ rip l
+rip (Rotate3 xyz l)      = both (rotateQ xyz) $ rip l
+rip (Shared (Mirror xyz l))      = both (mirror xyz) $ rip l
+rip (Shared (DifferenceR r a b)) =
   let (keep_a, cut_a) = rip a
    in (keep_a, unionR r $ cut_a : b)
 rip x                    = (x, mempty)
@@ -53,39 +51,10 @@ cut :: SymbolicObj3 -> SymbolicObj3
 cut = Shared3 . DifferenceR 0 mempty . pure . snd . rip
 
 carve :: SymbolicObj3 -> SymbolicObj3
-carve = eliminateEmpty . uncurry difference . fmap pure . rip
+carve = uncurry difference . fmap pure . rip
 
 pattern Inverse :: SymbolicObj3 -> SymbolicObj3
 pattern Inverse x = Shared3 (Scale (V3 1 1 1) x)
-
-
-eliminateEmpty :: SymbolicObj3 -> SymbolicObj3
-eliminateEmpty = head . drop 10 . iterate filterEmpty
-
-filterEmpty :: SymbolicObj3 -> SymbolicObj3
-filterEmpty x@Empty3 = x
-filterEmpty (Shared3 (Translate _ Empty3)) = Empty3
-filterEmpty (Shared3 (Scale _ Empty3)) = Empty3
-filterEmpty (Rotate3 _ Empty3) = Empty3
-filterEmpty (Shared3 (Mirror _ Empty3)) = Empty3
-filterEmpty (Shared3 (Shell _ Empty3)) = Empty3
-filterEmpty (Shared3 (Outset _ Empty3)) = Empty3
-filterEmpty (Shared3 (Translate r s)) = translate r $ filterEmpty s
-filterEmpty (Shared3 (Scale r s)) = scale r $ filterEmpty s
-filterEmpty (Rotate3 r s) = Rotate3 r $ filterEmpty s
-filterEmpty (Shared3 (UnionR _ [])) = Empty3
-filterEmpty (Shared3 (UnionR r s)) = unionR r $ filter (not . isEmpty) $ fmap filterEmpty s
-filterEmpty (Shared3 (DifferenceR r s ss)) = differenceR r (filterEmpty s) $ fmap filterEmpty ss
-filterEmpty (Shared3 (IntersectR r ss)) = intersectR r $ fmap filterEmpty ss
-filterEmpty (Shared3 (Shell r s)) = shell r $ filterEmpty s
-filterEmpty (Shared3 (Outset r s)) = outset r $ filterEmpty s
-filterEmpty (Shared3 (Complement s)) = complement $ filterEmpty s
-filterEmpty (Shared3 (Mirror r s)) = mirror r $ filterEmpty s
-filterEmpty x@(Shared3 Full{}) = x
-filterEmpty x@CubeR{} = x
-filterEmpty x@Sphere{} = x
-filterEmpty x@Cylinder{} = x
-filterEmpty x = x
 
 pattern Empty3 :: SymbolicObj3
 pattern Empty3 = Shared3 Empty

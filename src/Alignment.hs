@@ -13,6 +13,8 @@ import           Control.Lens hiding (plate, both)
 import           Graphics.Implicit.Primitives
 import qualified Linear as L
 import           Types
+import Data.List (foldl')
+import Merge (carve)
 
 
 getOrigin :: Object obj vec => obj -> vec
@@ -21,26 +23,17 @@ getOrigin = fst . getBox
 getExtent :: Object obj vec => obj -> vec
 getExtent = snd . getBox
 
-class StupidImplicitVector a where
-  zero :: a
-
-instance StupidImplicitVector R2 where
-  zero = mk2 0 0
-
-instance StupidImplicitVector R3 where
-  zero = mk3 0 0 0
-
 
 
 slamming
-    :: (Num a, Object obj vec, StupidImplicitVector vec)
+    :: (Num a, Object obj vec)
     => Lens' vec a
     -> (obj -> vec)
     -> obj
     -> obj
 slamming l boxsel obj =
   let dist = negate $ boxsel obj ^. l
-      dpos = zero & l .~ dist
+      dpos = 0 & l .~ dist
    in translate dpos obj
 
 slamBottom :: SymbolicObj3 -> SymbolicObj3
@@ -49,16 +42,16 @@ slamBottom = slam OnBottom
 slamTop :: SymbolicObj3 -> SymbolicObj3
 slamTop = slam OnTop
 
-slamLeft :: (Object obj vec, StupidImplicitVector vec, Field1 vec vec Double Double) => obj -> obj
+slamLeft :: (Object obj vec, Field1 vec vec Double Double) => obj -> obj
 slamLeft = slamming _1 getOrigin
 
-slamRight :: (Object obj vec, StupidImplicitVector vec, Field1 vec vec Double Double) => obj -> obj
+slamRight :: (Object obj vec, Field1 vec vec Double Double) => obj -> obj
 slamRight = slamming _1 getExtent
 
-slamFront :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
+slamFront :: (Object obj vec, Field2 vec vec Double Double) => obj -> obj
 slamFront = slamming _2 getOrigin
 
-slamBack :: (Object obj vec, StupidImplicitVector vec, Field2 vec vec Double Double) => obj -> obj
+slamBack :: (Object obj vec, Field2 vec vec Double Double) => obj -> obj
 slamBack = slamming _2 getExtent
 
 data Alignment = OnLeft | OnRight | OnTop | OnBottom | OnFront | OnBack
@@ -123,7 +116,7 @@ positioning :: [(R, Alignment)] -> SymbolicObj3 -> SymbolicObj3
 positioning as s = flip appEndo s $ flip foldMap as $ \(v, a) ->
   Endo $ \obj ->
     translate
-       ( zero
+       ( 0
          & alignmentAxis a .~ v * fromIntegral (alignmentDirection a))
        $ slam a obj
 
@@ -137,7 +130,7 @@ complementedIfShould i@Flush{} = insetAlign i
 complementedIfShould i@Abut{} = alignmentComplement $ insetAlign i
 
 inset :: SymbolicObj3 -> [Inset] -> SymbolicObj3 -> SymbolicObj3
-inset s1 as s2 = center3 $
+inset s1 as s2 = -- center3 $
   foldr (\i -> slam $ complementedIfShould i) s1 as
     <> positioning (fmap unwrapInset as) s2
 
@@ -146,4 +139,17 @@ center3 obj =
   let (orig, ext) = getBox obj
       dpos = negate $ orig + (ext - orig)  L.^* 0.5
    in translate dpos obj
+
+centerXY :: SymbolicObj3 -> SymbolicObj3
+centerXY obj =
+  let (orig, ext) = getBox obj
+      dpos = negate $ orig + (ext - orig)  L.^* 0.5
+   in translate (dpos & L._z .~ 0) obj
+
+insetting
+    :: Foldable t
+    => SymbolicObj3
+    -> t ([Inset], SymbolicObj3)
+    -> SymbolicObj3
+insetting = foldl' (uncurry . inset)
 
