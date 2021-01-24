@@ -108,3 +108,6 @@ m3MountingPlate = slamBottom $ center3 $ carve $
 m3Hole :: SymbolicObj3
 m3Hole = inverse $ center3 $ cylinder (3.3/2) 5
 
+hcSr04 :: SymbolicObj3
+hcSr04 = inverse $ center3 $ rotate3 (degX $ -90) $ reflected $ translateXY 12.5 0 $ cylinder 8.1 11
+

@@ -306,8 +306,6 @@ dcGearedMotor = slamRight $ translate (mk3 0 0 $ negate $ 35 - 11) $ slamBottom 
             ]
 
 
-hcSr04 :: SymbolicObj3
-hcSr04 = inverse $ center3 $ rotate3 (degX 90) $ reflected $ translateXY 18 0 $ cylinder 8.5 11
 
 hcSr04TempHoles :: SymbolicObj3
 hcSr04TempHoles = inverse $ center3 $ rotate3 (degX $ -90) $ reflected $ translateXY 12.5 0 $

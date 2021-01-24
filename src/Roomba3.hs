@@ -12,8 +12,30 @@ import Graphics.Implicit.Primitives
 
 
 main :: IO ()
-main = writeSTL 0.5 "/tmp/roomba2.stl" $
-  center3 $ tap
+main = writeSTL 1 "/tmp/roomba2.stl" $
+  center3 $ power_holder
+
+
+final_walls :: SymbolicObj3
+final_walls =
+  let chassis = intersect [ plateWalls, carve $ mconcat [ wheels , plateWalls ] ]
+      slot_w = 145
+      power_w = 23
+      power_h = 17
+      charge_rad = 11 / 2
+   in difference (slamFront $ slamBottom $ center3 chassis)
+        [ translateXY 0 5 $ slamFront $ slamBottom $ cube True $ V3 slot_w 250 38
+        , translate (V3 (-30) (65) (53)) $ slamBottom $ cube True $ V3 200 power_w power_h
+        , translate (V3 (-60) (65 / 2) (40)) $ slamBottom $ center3 $ rotate3 (degX 90) $ cylinder charge_rad 200
+        , translate (V3 0 195 88) $ center3 hcSr04
+        , translate (V3 80 0 0) $ slamBottom $ cube True $ V3 25 50 10
+        ]
+
+final_ramp :: SymbolicObj3
+final_ramp = rotate3 (degX $ -30) $ intersect
+  [ slamBottom $ rotate3 (degX $ -60) $ cubeFaces [OnLeft, OnRight, OnBack] 80 15 20 1
+  , slamBottom $ cube True $ V3 82 40 11
+  ]
 
 translateXYV :: R2 -> SymbolicObj3 -> SymbolicObj3
 translateXYV (V2 x y) = translateXY x y
@@ -24,7 +46,7 @@ final_plate = flip difference [translate (V3 0 0 (-wall_groove)) plateWalls] $
   [ plate
   , inverse $ translate (0 & _xy .~ hole_pos) $ slamBack $ centeredBox  80 15 6
   , reflected $ translate (0 & _xy .~ agi_pos) agitatorSlot
-  , reflected $ translate (0 & _xy .~ wheel_pos) dcGearedMotor
+  , wheels
   , translate (0 & _xy .~ arduino_pos) $ slamFront $ rotate3 (degZ 90) arduinoMiniSlot
   , translate (0 & _xy .~ controller_pos) $ slamBack l298nSlot
   , translate (0 & _xy .~ battery_pos) $ placeholder $ slamBack ovonicLipoBatterySlot
@@ -37,12 +59,17 @@ final_plate = flip difference [translate (V3 0 0 (-wall_groove)) plateWalls] $
     wall_groove = 0.5
 
     agi_pos = V2 78 68
-    wheel_pos = V2 (-70) 10
     controller_pos = V2 (-60) back_align
     battery_pos = V2 0 back_align
     arduino_pos = V2 (80) (-105)
     buck_pos = V2 45 back_align
     caster_pos = V2 0 (-100)
+
+wheels :: SymbolicObj3
+wheels =
+  reflected $ translate (0 & _xy .~ wheel_pos) dcGearedMotor
+  where
+    wheel_pos = V2 (-70) 10
 
 
 final_lid :: SymbolicObj3
@@ -89,7 +116,7 @@ plateWalls = Shared $ IntersectR 0 $ pure $ slamBottom $ mirror (V3 0 1 0) $
   where
     w = 200
     d = 200
-    h = 80
+    h = 107
     th = 2
     front_round = 5
     back_round = 45
@@ -108,11 +135,11 @@ dcWheelWithWell = rotate3 (degY 90) $
   let wheel = cylinder wheel_rad wheel_depth
       wheelBB = translate (mk3 11 0 14) $ centeredBox 2 ((wheel_rad + bb_tolerance) * 2) wheel_depth
       -- TODO(sandy): temporary for making the base plate
-      fender = const mempty $
+      fender =
         intersect
           [ shell 2 $ outset 5 wheel
-          , cylinder 50 28
-          , translate (mk3 11 0 0) $ slamRight $ slamBottom $ cube True (mk3 100 100 28)
+          , cylinder 50 wheel_depth
+          , translate (mk3 11 0 0) $ slamRight $ slamBottom $ cube True (mk3 100 100 wheel_depth)
           ]
    in flush fender 0 OnBottom $ inverse $ wheelBB <> outset 2.5 wheel
   where
@@ -128,7 +155,8 @@ dcGearedMotor = slamRight $ translate (mk3 0 0 $ negate $ 35 - 11) $ slamBottom 
         [Abut 1.5 OnLeft, Flush (35 - 11 - 5.5) OnBottom]
         $ mconcat
             [ inverse $ slamBottom motor
-            , extrudedSlot 2 6.5 motor
+            , inverse $
+                extrudedSlot 2 6.5 motor
             , inverse $ slamTop $ centeredBox 3 5.5 5.5
             ]
 
@@ -230,8 +258,8 @@ final_agitator = carve $ mconcat $
     brushes = 8
 
 
-tap :: SymbolicObj3
-tap = mconcat $
+final_tap :: SymbolicObj3
+final_tap = mconcat $
   [ slamBottom $ carve $ mconcat
     [ slamTop $ centeredBox w d th
     , inverse $ slamTop $ centeredBox (w - lip) (d - lip) half_th
@@ -248,8 +276,8 @@ tap = mconcat $
 
     half_th = th / 2
 
-tapHolder :: SymbolicObj3
-tapHolder = mconcat $
+final_tapHolder :: SymbolicObj3
+final_tapHolder = mconcat $
   [ slamBottom $ carve $ mconcat
     [ slamTop $ centeredBox (w - lip) (d - lip) half_th
     , inverse $ slamTop $ centeredBox (w - lip * 3) (d - lip * 3) th
@@ -265,5 +293,8 @@ tapHolder = mconcat $
 
     half_th = th / 2
 
+
+power_holder :: SymbolicObj3
+power_holder = extrudedSlot 5 2 $ centeredBox 21 12 10
 
 
